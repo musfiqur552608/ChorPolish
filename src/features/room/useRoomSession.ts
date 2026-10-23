@@ -63,6 +63,8 @@ const ROOM_CHANGE_KEYS = [
   'cleanup_at',
 ];
 
+const SUBSCRIBED_ROOMS = new Set<string>();
+
 function madeMeaningfulChange(
   payload: RealtimePostgresChangesPayload<Record<string, unknown>>,
   keys: string[],
@@ -222,6 +224,10 @@ export function useRoomSession({ code, initialName = '', initialAvatar = '' }: S
     const roomId = state?.room.id;
     if (!roomId || !userId) return;
 
+    // Skip if already subscribed to this room
+    if (SUBSCRIBED_ROOMS.has(roomId)) return;
+    SUBSCRIBED_ROOMS.add(roomId);
+
     let nudgeTimer = 0;
     const nudge = () => {
       window.clearTimeout(nudgeTimer);
@@ -279,11 +285,14 @@ export function useRoomSession({ code, initialName = '', initialAvatar = '' }: S
           channelStatus === 'CLOSED'
         ) {
           setConnected(false);
+          // Remove from subscribed set on error so we can re-subscribe
+          SUBSCRIBED_ROOMS.delete(roomId);
         }
       });
 
     return () => {
       window.clearTimeout(nudgeTimer);
+      SUBSCRIBED_ROOMS.delete(roomId);
       void supabase?.removeChannel(channel);
     };
   }, [status, state?.room.id, userId, syncNow]);
