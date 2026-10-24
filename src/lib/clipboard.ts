@@ -16,10 +16,13 @@ export async function copyText(text: string): Promise<boolean> {
     textarea.style.left = '-9999px';
     textarea.style.opacity = '0';
     document.body.appendChild(textarea);
-    textarea.select();
-    const ok = document.execCommand('copy');
-    document.body.removeChild(textarea);
-    return ok;
+    try {
+      textarea.select();
+      return document.execCommand('copy');
+    } finally {
+      // Always clean up, even if execCommand throws or the document changes.
+      document.body.removeChild(textarea);
+    }
   } catch {
     return false;
   }

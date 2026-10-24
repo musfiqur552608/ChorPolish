@@ -1,16 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import type { Role } from '@/types';
+import type { Phase, Role, RoundHistory } from '@/types';
 import {
+  ALLOWED_TRANSITIONS,
   computeFunStats,
   getDrawOrder,
   getShufflerForRound,
   getTargetForRound,
   isRoleVisibleTo,
   isTransitionAllowed,
+  mergeRoundHistory,
   nextRoundDestination,
   nextTimedPhase,
   rankPlayers,
   scoreRound,
+  topPlayerIds,
   totalScoresByPlayer,
   validateRoleAssignment,
   clockwiseAfter,
@@ -139,6 +142,23 @@ describe('scoreRound', () => {
     expect(() => scoreRound({ roles: ROLES_CHOR, targetRole: 'CHOR', policeGuessPlayerId: 'p1' })).toThrow();
     expect(() => scoreRound({ roles: ROLES_CHOR, targetRole: 'CHOR', policeGuessPlayerId: 'p2' })).toThrow();
   });
+  it('scores even-round Dakat hunts correctly', () => {
+    const roles: Record<string, Role> = { p1: 'BABU', p2: 'POLICE', p3: 'CHOR', p4: 'DAKAT' };
+    const caught = scoreRound({ roles, targetRole: 'DAKAT', policeGuessPlayerId: 'p4' });
+    expect(caught.caught).toBe(true);
+    expect(caught.scores.find((s) => s.role === 'DAKAT')?.points).toBe(0);
+    expect(caught.scores.find((s) => s.role === 'CHOR')?.points).toBe(GAME_CONFIG.points.CHOR);
+
+    const escaped = scoreRound({ roles, targetRole: 'DAKAT', policeGuessPlayerId: 'p3' });
+    expect(escaped.caught).toBe(false);
+    expect(escaped.scores.find((s) => s.role === 'DAKAT')?.points).toBe(GAME_CONFIG.points.DAKAT);
+    expect(escaped.scores.find((s) => s.role === 'CHOR')?.points).toBe(GAME_CONFIG.points.CHOR);
+  });
+  it('throws for an accused player who is not at the table', () => {
+    expect(() =>
+      scoreRound({ roles: ROLES_CHOR, targetRole: 'CHOR', policeGuessPlayerId: 'ghost' }),
+    ).toThrow();
+  });
 });
 
 describe('rankPlayers', () => {
@@ -173,6 +193,46 @@ describe('rankPlayers', () => {
     expect(ranked.find((p) => p.id === 'p1')?.rank).toBe(1);
     expect(ranked.find((p) => p.id === 'p2')?.rank).toBe(1);
   });
+  it('preserves additional player fields', () => {
+    const ranked = rankPlayers([
+      { id: 'p1', seat: 1, totalScore: 10, babuCount: 0, name: 'Rafi', avatar: '🦊' },
+    ]);
+    expect(ranked[0]).toMatchObject({ id: 'p1', name: 'Rafi', avatar: '🦊', rank: 1 });
+  });
+});
+
+describe('topPlayerIds', () => {
+  it('returns the clear leader', () => {
+    expect(
+      topPlayerIds([
+        { id: 'p1', totalScore: 200, babuCount: 1 },
+        { id: 'p2', totalScore: 180, babuCount: 3 },
+      ]),
+    ).toEqual(['p1']);
+  });
+
+  it('breaks a score tie with the Babu count', () => {
+    expect(
+      topPlayerIds([
+        { id: 'p1', totalScore: 200, babuCount: 1 },
+        { id: 'p2', totalScore: 200, babuCount: 2 },
+      ]),
+    ).toEqual(['p2']);
+  });
+
+  it('returns every joint leader when both score and Babu count tie', () => {
+    expect(
+      topPlayerIds([
+        { id: 'p1', totalScore: 200, babuCount: 2 },
+        { id: 'p2', totalScore: 200, babuCount: 2 },
+        { id: 'p3', totalScore: 100, babuCount: 4 },
+      ]),
+    ).toEqual(['p1', 'p2']);
+  });
+
+  it('returns an empty list with no players', () => {
+    expect(topPlayerIds([])).toEqual([]);
+  });
 });
 
 describe('isTransitionAllowed', () => {
@@ -181,9 +241,15 @@ describe('isTransitionAllowed', () => {
     expect(isTransitionAllowed('DRAW', 'HIDDEN_ROLES')).toBe(true);
     expect(isTransitionAllowed('HIDDEN_ROLES', 'BABU_REVEAL')).toBe(true);
   });
+  it('allows the manual Police jump and the legacy loop', () => {
+    expect(isTransitionAllowed('POLICE_REVEAL', 'POLICE_GUESS')).toBe(true);
+    expect(isTransitionAllowed('POLICE_REVEAL', 'BABU_ORDER')).toBe(true);
+    expect(isTransitionAllowed('BABU_ORDER', 'POLICE_GUESS')).toBe(true);
+  });
   it('disallows backwards transitions', () => {
     expect(isTransitionAllowed('DRAW', 'SHUFFLE')).toBe(false);
     expect(isTransitionAllowed('BABU_REVEAL', 'HIDDEN_ROLES')).toBe(false);
+    expect(isTransitionAllowed('POLICE_GUESS', 'POLICE_REVEAL')).toBe(false);
   });
   it('allows ROUND_RESULT to go to next round or MATCH_END', () => {
     expect(isTransitionAllowed('ROUND_RESULT', 'SHUFFLE')).toBe(true);
@@ -192,18 +258,27 @@ describe('isTransitionAllowed', () => {
 });
 
 describe('nextTimedPhase', () => {
-  it('advances timed phases', () => {
+  it('advances automatic phases', () => {
     expect(nextTimedPhase('SHUFFLE')).toBe('DRAW');
     expect(nextTimedPhase('HIDDEN_ROLES')).toBe('BABU_REVEAL');
     expect(nextTimedPhase('FINAL_REVEAL')).toBe('ROUND_RESULT');
   });
   it('returns null for manual or terminal phases', () => {
     expect(nextTimedPhase('DRAW')).toBe(null);
-    expect(nextTimedPhase('BABU_REVEAL')).toBe('POLICE_REVEAL');
-    expect(nextTimedPhase('POLICE_REVEAL')).toBe('BABU_ORDER');
+    expect(nextTimedPhase('BABU_REVEAL')).toBe(null);
+    expect(nextTimedPhase('POLICE_REVEAL')).toBe(null);
     expect(nextTimedPhase('POLICE_GUESS')).toBe(null);
     expect(nextTimedPhase('ROUND_RESULT')).toBe(null);
     expect(nextTimedPhase('MATCH_END')).toBe(null);
+  });
+  it('still advances the legacy BABU_ORDER phase', () => {
+    expect(nextTimedPhase('BABU_ORDER')).toBe('POLICE_GUESS');
+  });
+  it('never yields a transition the table forbids', () => {
+    for (const phase of Object.keys(ALLOWED_TRANSITIONS) as Phase[]) {
+      const next = nextTimedPhase(phase);
+      if (next) expect(isTransitionAllowed(phase, next), `${phase} -> ${next}`).toBe(true);
+    }
   });
 });
 
@@ -251,6 +326,42 @@ describe('isRoleVisibleTo', () => {
   });
 });
 
+describe('mergeRoundHistory', () => {
+  const serverRound: RoundHistory = {
+    id: 'round-1',
+    number: 1,
+    shufflerId: 'p1',
+    targetRole: 'CHOR',
+    guessPlayerId: 'p3',
+    guessCorrect: true,
+    results: [
+      { playerId: 'p1', role: 'BABU', points: 90 },
+      { playerId: 'p2', role: 'POLICE', points: 80 },
+      { playerId: 'p3', role: 'CHOR', points: 0 },
+      { playerId: 'p4', role: 'DAKAT', points: 70 },
+    ],
+    finishedAt: '2026-10-24T12:00:00.000Z',
+  };
+
+  it('appends a round the client has not seen yet', () => {
+    expect(mergeRoundHistory([], serverRound)).toEqual([serverRound]);
+  });
+
+  it('does not duplicate a round already present by id', () => {
+    const merged = mergeRoundHistory([serverRound], {
+      ...serverRound,
+      finishedAt: '2026-10-24T12:01:00.000Z',
+    });
+    expect(merged).toHaveLength(1);
+    expect(merged[0]?.finishedAt).toBe(serverRound.finishedAt);
+  });
+
+  it('does not duplicate a round with the same number but a different id', () => {
+    const merged = mergeRoundHistory([serverRound], { ...serverRound, id: 'client-round' });
+    expect(merged).toHaveLength(1);
+  });
+});
+
 describe('totalScoresByPlayer', () => {
   it('aggregates points across rounds', () => {
     const totals = totalScoresByPlayer(HISTORY_CAUGHT as never);
@@ -258,6 +369,10 @@ describe('totalScoresByPlayer', () => {
     expect(totals.p2).toBe(140);
     expect(totals.p3).toBe(70);
     expect(totals.p4).toBe(160);
+  });
+
+  it('returns an empty map with no history', () => {
+    expect(totalScoresByPlayer([])).toEqual({});
   });
 });
 
@@ -270,5 +385,17 @@ describe('computeFunStats', () => {
     expect(stats.bestDetectiveIds).toContain('p1');
     expect(stats.bestDetectiveIds).toContain('p2');
     expect(stats.mostBabuIds.length).toBeGreaterThan(0);
+  });
+
+  it('returns empty superlatives for an unfinished match', () => {
+    const stats = computeFunStats(PLAYERS.map((p) => ({ ...p })), []);
+    expect(stats.bestDetectiveIds).toEqual([]);
+    expect(stats.mostBabuIds).toEqual([]);
+    expect(stats.mostFooledIds).toEqual([]);
+    expect(stats.comebackIds).toEqual([]);
+    expect(stats.maxCatches).toBe(0);
+    expect(stats.maxBabus).toBe(0);
+    expect(stats.maxFooled).toBe(0);
+    expect(stats.maxComeback).toBe(0);
   });
 });

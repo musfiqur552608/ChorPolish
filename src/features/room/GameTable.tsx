@@ -21,12 +21,14 @@ import { GAME_CONFIG } from '@/config/game';
 import { toast } from '@/hooks/useToastStore';
 import { cn } from '@/lib/cn';
 import { localizeNumber } from '@/lib/numbers';
+import { secondsUntil } from '@/lib/time';
 import { haptics } from '@/lib/haptics';
 import { sound } from '@/lib/sound';
 import { ScoreSheet } from '@/features/scoresheet/ScoreSheet';
 import { ExportScoreSheet } from '@/features/scoresheet/ExportScoreSheet';
+import { mergeRoundHistory, rankPlayers } from '@/features/engine/engine';
 import type { RoomSession } from './useRoomSession';
-import type { Role } from '@/types';
+import type { Role, RoundHistory } from '@/types';
 
 const REACTIONS = GAME_CONFIG.reactions;
 
@@ -349,20 +351,21 @@ export function GameTable({ session }: GameTableProps) {
 
   const renderSlipGrid = () => (
     <div className="grid grid-cols-4 gap-2 sm:gap-3">
-      {[1, 2, 3, 4].map((slot) => {
+      {GAME_CONFIG.slots.map((slot) => {
         const available = availableSlots.includes(slot);
         const taken = !available;
+        const canPickThis = Boolean(isMyTurnToPick && available);
         return (
           <motion.div
             key={slot}
-            whileHover={isMyTurnToPick && available ? { scale: 1.03 } : undefined}
-            whileTap={isMyTurnToPick && available ? { scale: 0.96 } : undefined}
+            whileHover={canPickThis ? { scale: 1.03 } : undefined}
+            whileTap={canPickThis ? { scale: 0.96 } : undefined}
             className={cn(
               'group relative aspect-square rounded-[8px] border-2 shadow-sm flex flex-col items-center justify-center transition-all',
               taken
                 ? 'border-terracotta/20 bg-terracotta/[0.05]'
                 : available
-                  ? isMyTurnToPick
+                  ? canPickThis
                     ? 'border-mustard bg-mustard/[0.08]'
                     : 'border-ink/10 bg-paper-light'
                   : 'border-ink/5 bg-paper-deep/20',
@@ -371,8 +374,8 @@ export function GameTable({ session }: GameTableProps) {
             <RoleSlip
               size="md"
               faceDown
-              interactive={Boolean(isMyTurnToPick && available)}
-              onClick={() => void handlePick(slot)}
+              interactive={canPickThis}
+              onClick={canPickThis ? () => void handlePick(slot) : undefined}
               showBrand={false}
               animateIn
               aria-label={t('game.tapToPeek')}
@@ -382,9 +385,9 @@ export function GameTable({ session }: GameTableProps) {
                 ✔
               </span>
             )}
-            {isMyTurnToPick && available && (
+            {canPickThis && (
               <span className="absolute top-1 left-1/2 -translate-x-1/2 flex h-5 w-5 items-center justify-center rounded-full border border-mustard bg-mustard text-[9px] font-bold text-ink shadow-sm">
-                {localizeNumber(slot, language)}
+                {localizeNumber(slot + 1, language)}
               </span>
             )}
           </motion.div>
@@ -413,8 +416,10 @@ export function GameTable({ session }: GameTableProps) {
             {t('game.pausedBody')}
           </p>
           <div className="mt-5">
-            <span className="font-mono text-[28px] font-bold text-ink">{seconds}</span>
-            <span className="ml-1 text-sm font-semibold text-ink-soft">{t('game.pausedGrace', { seconds })}</span>
+            <span className="font-mono text-[28px] font-bold text-ink">{localizeNumber(seconds, language)}</span>
+            <span className="ml-1 text-sm font-semibold text-ink-soft">
+              {t('game.pausedGrace', { seconds: localizeNumber(seconds, language) })}
+            </span>
           </div>
           {expired && (
             <p className="mt-3 text-sm font-medium text-terracotta">{t('errors.GRACE_EXPIRED')}</p>
@@ -777,7 +782,28 @@ export function GameTable({ session }: GameTableProps) {
   const renderRoundResult = () => {
     const roundResults = round?.results ?? [];
     const caught = round?.guessCorrect ?? false;
-    const targetPlayer = players.find((p) => p.id === round?.guessPlayerId);
+    // The real target is public at ROUND_RESULT. On an escape this is the
+    // player who got away, not the innocent person Police accused.
+    const targetPlayer =
+      players.find((p) => revealedRoleFor(p.id) === round?.targetRole) ??
+      players.find((p) => p.id === round?.guessPlayerId);
+
+    const currentHistory: RoundHistory | null =
+      round && roundResults.length > 0
+        ? {
+            id: round.id,
+            number: currentRoundNumber,
+            shufflerId: round.shufflerId,
+            targetRole: round.targetRole,
+            guessPlayerId: round.guessPlayerId,
+            guessCorrect: round.guessCorrect,
+            results: roundResults,
+            finishedAt: new Date().toISOString(),
+          }
+        : null;
+    const sheetHistory = currentHistory
+      ? mergeRoundHistory(history, currentHistory)
+      : history;
 
     return (
       <section className="space-y-4">
@@ -806,20 +832,7 @@ export function GameTable({ session }: GameTableProps) {
             totalScore: p.totalScore,
             babuCount: p.babuCount,
           }))}
-          history={history.concat(
-            roundResults.length > 0
-              ? [{
-                  id: round?.id ?? '',
-                  number: currentRoundNumber,
-                  shufflerId: round?.shufflerId ?? '',
-                  targetRole: round?.targetRole ?? 'CHOR',
-                  guessPlayerId: round?.guessPlayerId ?? null,
-                  guessCorrect: round?.guessCorrect ?? null,
-                  results: roundResults,
-                  finishedAt: new Date().toISOString(),
-                }]
-              : [],
-          )}
+          history={sheetHistory}
           totalRounds={totalRounds}
           currentRound={currentRoundNumber}
           live={false}
@@ -859,121 +872,174 @@ export function GameTable({ session }: GameTableProps) {
             )}
           </div>
         ) : (
-          <Button
-            fullWidth
-            size="lg"
-            variant="primary"
-            disabled={busy === 'advance'}
-            loading={busy === 'advance'}
-            onClick={() => void handleAdvance()}
-            leftIcon={<Play className="h-4 w-4" aria-hidden />}
-          >
-            {t('result.title')}
-          </Button>
+          <div className="mt-4">
+            <Button
+              fullWidth
+              size="lg"
+              variant="primary"
+              disabled={busy === 'advance' || !mePlayer?.isHost}
+              loading={busy === 'advance'}
+              onClick={() => void handleAdvance()}
+              leftIcon={<Play className="h-4 w-4" aria-hidden />}
+            >
+              {mePlayer?.isHost ? t('result.title') : t('game.waitingHostNext')}
+            </Button>
+            {!mePlayer?.isHost && (
+              <p className="mt-2 text-center text-[11px] text-ink-soft">{t('game.nextRoundHint')}</p>
+            )}
+          </div>
         )}
       </section>
     );
   };
 
   const renderMatchEnd = () => {
-    const ranked = [...players]
-      .sort((a, b) => b.totalScore - a.totalScore || b.babuCount - a.babuCount || a.seat - b.seat)
-      .map((player, index) => ({ ...player, rank: index + 1 }));
-    const topScore = ranked[0]?.totalScore ?? 0;
-    const topBabu = ranked.filter((p) => p.totalScore === topScore).reduce((max, p) => Math.max(max, p.babuCount), 0);
-    const winners = ranked.filter((p) => p.totalScore === topScore && p.babuCount === topBabu);
+    // Competition ranking: equal score + equal Babu count share a rank
+    // (1, 2, 2, 4). Never use the array index here.
+    const ranked = rankPlayers(players);
+    const winners = ranked.filter((player) => player.rank === 1);
     const isShared = winners.length > 1;
+    const lastRank = Math.max(...ranked.map((player) => player.rank));
+    const abandoned = room?.finishedReason === 'abandoned';
+    // A match that stopped during round one has no result to rank.
+    const noRounds = history.length === 0;
+    const cleanupSeconds = room?.cleanupAt ? secondsUntil(room.cleanupAt) : null;
+    const sheetPlayers = players.map((p) => ({
+      id: p.id,
+      name: p.name,
+      avatar: p.avatar,
+      isMe: p.id === me?.id,
+      isHost: p.isHost,
+      totalScore: p.totalScore,
+      babuCount: p.babuCount,
+    }));
 
     return (
       <section className="space-y-5">
-        <div className="rounded-[12px] border-2 border-mustard bg-mustard/[0.08] p-6 text-center shadow-sm">
-          {isShared ? (
-            <>
-              <h2 className="font-display text-2xl font-bold text-ink">{t('result.sharedTitle')}</h2>
-              <p className="mt-1 text-sm text-ink-soft">{t('result.sharedSub')}</p>
-            </>
-          ) : (
-            <>
-              <h2 className="font-display text-2xl font-bold text-ink">{t('result.winnerTitle', { name: winners[0]?.name ?? '' })}</h2>
-              <p className="mt-1 text-sm text-ink-soft">{t('result.winnerSub')}</p>
-            </>
-          )}
-          {winners.map((player) => (
-            <span key={player.id} className="mt-3 inline-flex items-center gap-2 rounded-full border border-mustard bg-mustard px-3 py-1 text-xs font-bold text-[#6a4a0d]">
-              <Crown className="h-3.5 w-3.5" aria-hidden />
-              {t('result.winnerTag')}
-            </span>
-          ))}
-        </div>
+        {abandoned && (
+          <div className="rounded-[12px] border-2 border-terracotta/30 bg-terracotta/[0.05] p-4 text-center shadow-sm">
+            <p className="text-sm font-semibold text-terracotta">{t('result.abandonedBanner')}</p>
+            {!noRounds && (
+              <p className="mt-1 text-[12px] leading-snug text-ink-soft">{t('result.partialNote')}</p>
+            )}
+            {cleanupSeconds !== null && (
+              <p className="mt-1 text-[12px] font-medium text-ink-soft">
+                {cleanupSeconds > 0
+                  ? t('result.cleanupWarning', { seconds: cleanupSeconds })
+                  : t('result.cleanupSoon')}
+              </p>
+            )}
+          </div>
+        )}
 
-        <ScoreSheet
-          players={players.map((p) => ({
-            id: p.id,
-            name: p.name,
-            avatar: p.avatar,
-            isMe: p.id === me?.id,
-            isHost: p.isHost,
-            totalScore: p.totalScore,
-            babuCount: p.babuCount,
-          }))}
-          history={history}
-          totalRounds={totalRounds}
-          live={false}
-        />
-
-        <ExportScoreSheet
-          players={players.map((p) => ({
-            id: p.id,
-            name: p.name,
-            avatar: p.avatar,
-            isMe: p.id === me?.id,
-            isHost: p.isHost,
-            totalScore: p.totalScore,
-            babuCount: p.babuCount,
-          }))}
-          history={history}
-          totalRounds={totalRounds}
-        />
-
-        <div className="space-y-2">
-          <h3 className="font-display text-sm font-bold text-ink uppercase tracking-wider">{t('result.ranking')}</h3>
-          {ranked.map((player, index) => {
-            const place = index + 1;
-            const isWinner = winners.includes(player);
-            const isLast = place === players.length;
-            return (
-              <motion.div
-                key={player.id}
-                whileHover={{ x: 4 }}
-                className={cn(
-                  'flex items-center justify-between gap-3 px-3 py-2 rounded-lg border transition-colors',
-                  isWinner
-                    ? 'border-mustard bg-mustard/[0.06]'
-                    : isLast
-                      ? 'border-terracotta/20 bg-terracotta/[0.04]'
-                      : 'border-ink/10 bg-paper-light',
-                )}
-              >
-                <span className="flex items-center gap-2 text-[13px] font-bold">
-                  {place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : localizeNumber(place, language)}
-                  {isWinner && <span className="text-xs text-mustard">{t('result.winnerTag')}</span>}
-                  {isLast && place > 1 && <span className="text-xs text-terracotta">{t('result.loser')}</span>}
+        {noRounds ? (
+          <div className="rounded-[12px] border-2 border-ink/15 bg-paper-light p-6 text-center shadow-sm">
+            <h2 className="font-display text-2xl font-bold text-ink">{t('result.noResultTitle')}</h2>
+            <p className="mt-1 text-sm text-ink-soft">{t('result.noResultBody')}</p>
+          </div>
+        ) : (
+          <>
+            <div className="rounded-[12px] border-2 border-mustard bg-mustard/[0.08] p-6 text-center shadow-sm">
+              {isShared ? (
+                <>
+                  <h2 className="font-display text-2xl font-bold text-ink">{t('result.sharedTitle')}</h2>
+                  <p className="mt-1 text-sm text-ink-soft">{t('result.sharedSub')}</p>
+                </>
+              ) : (
+                <>
+                  <h2 className="font-display text-2xl font-bold text-ink">
+                    {t('result.winnerTitle', { name: winners[0]?.name ?? '' })}
+                  </h2>
+                  <p className="mt-1 text-sm text-ink-soft">{t('result.winnerSub')}</p>
+                </>
+              )}
+              {winners.map((player) => (
+                <span
+                  key={player.id}
+                  className="mt-3 inline-flex items-center gap-2 rounded-full border border-mustard bg-mustard px-3 py-1 text-xs font-bold text-[#6a4a0d]"
+                >
+                  <Crown className="h-3.5 w-3.5" aria-hidden />
+                  {t('result.winnerTag')}
                 </span>
-                <div className="flex items-center gap-2 text-right">
-                  <span className="font-mono text-[15px] font-bold text-ink">{player.totalScore}</span>
-                  <span className="text-[11px] text-ink-faint">{t('common.points')} · {t('sheet.babuMark', { count: player.babuCount })}</span>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
+              ))}
+            </div>
+
+            <ScoreSheet
+              players={sheetPlayers}
+              history={history}
+              totalRounds={totalRounds}
+              live={false}
+            />
+
+            <ExportScoreSheet
+              players={sheetPlayers}
+              history={history}
+              totalRounds={totalRounds}
+            />
+
+            <div className="space-y-2">
+              <h3 className="font-display text-sm font-bold text-ink uppercase tracking-wider">
+                {t('result.ranking')}
+              </h3>
+              {ranked.map((player) => {
+                const place = player.rank;
+                const isWinner = place === 1;
+                const isLast = place === lastRank && place > 1;
+                return (
+                  <motion.div
+                    key={player.id}
+                    whileHover={{ x: 4 }}
+                    className={cn(
+                      'flex items-center justify-between gap-3 rounded-lg border px-3 py-2 transition-colors',
+                      isWinner
+                        ? 'border-mustard bg-mustard/[0.06]'
+                        : isLast
+                          ? 'border-terracotta/20 bg-terracotta/[0.04]'
+                          : 'border-ink/10 bg-paper-light',
+                    )}
+                  >
+                    <span className="flex items-center gap-2 text-[13px] font-bold">
+                      {place === 1
+                        ? '🥇'
+                        : place === 2
+                          ? '🥈'
+                          : place === 3
+                            ? '🥉'
+                            : localizeNumber(place, language)}
+                      {isWinner && <span className="text-xs text-mustard">{t('result.winnerTag')}</span>}
+                      {isLast && <span className="text-xs text-terracotta">{t('result.loser')}</span>}
+                    </span>
+                    <div className="flex items-center gap-2 text-right">
+                      <span className="font-mono text-[15px] font-bold text-ink">
+                        {localizeNumber(player.totalScore, language)}
+                      </span>
+                      <span className="text-[11px] text-ink-faint">
+                        {t('common.points')} · {t('sheet.babuMark', { count: player.babuCount })}
+                      </span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </>
+        )}
 
         <div className="mt-5 flex gap-2">
-          <Button fullWidth variant="secondary" onClick={() => void window.location.assign('/')} leftIcon={<ArrowLeft className="h-4 w-4" aria-hidden />}>
-            {t('result.newGame') ?? t('common.backHome')}
+          <Button
+            fullWidth
+            variant="secondary"
+            onClick={() => void window.location.assign('/')}
+            leftIcon={<ArrowLeft className="h-4 w-4" aria-hidden />}
+          >
+            {t('result.newGame')}
           </Button>
-          <Button fullWidth variant="primary" onClick={handleLeave} leftIcon={<UserRound className="h-4 w-4" aria-hidden />}>
-            {t('result.leaveRoom') ?? t('game.leaveConfirm')}
+          <Button
+            fullWidth
+            variant="primary"
+            onClick={handleLeave}
+            leftIcon={<UserRound className="h-4 w-4" aria-hidden />}
+          >
+            {t('result.leaveRoom')}
           </Button>
         </div>
       </section>
@@ -982,7 +1048,7 @@ export function GameTable({ session }: GameTableProps) {
 
   // ── Main body ──
   let bodyContent;
-  if (isPaused) {
+  if (isPaused && pausedPlayer) {
     bodyContent = <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">{renderSlipGrid()}</div>;
   } else if (round?.phase === 'ROUND_RESULT') {
     bodyContent = renderRoundResult();
@@ -1017,7 +1083,7 @@ export function GameTable({ session }: GameTableProps) {
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center min-h-[300px] gap-5">
         {renderMySlipCard()}
         <div className="grid grid-cols-4 gap-2 opacity-60" aria-hidden>
-          {[1, 2, 3, 4].map((slot) => (
+          {GAME_CONFIG.slots.map((slot) => (
             <RoleSlip key={slot} size="sm" faceDown animateIn />
           ))}
         </div>

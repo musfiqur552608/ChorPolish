@@ -4,8 +4,6 @@ const url = import.meta.env.VITE_SUPABASE_URL?.trim();
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
 
 export const isSupabaseConfigured = Boolean(url && anonKey);
-export const demoEnabled =
-  import.meta.env.VITE_ENABLE_DEMO !== 'false' && (isSupabaseConfigured || import.meta.env.DEV);
 
 /**
  * Public Supabase client. The anonymous key is safe to ship; all privileged

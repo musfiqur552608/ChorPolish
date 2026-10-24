@@ -25,6 +25,7 @@ import { ensureAnonymousUser, isSupabaseConfigured, supabase } from '@/lib/supab
 import { normalizeApiError, userErrorMessage } from '@/lib/errors';
 import { useToastStore } from '@/hooks/useToastStore';
 import { clearRecentRoom, saveProfileDraft } from '@/lib/profileDraft';
+import { isValidRoomCode } from '@/lib/roomCode';
 import { sound } from '@/lib/sound';
 import { haptics } from '@/lib/haptics';
 
@@ -143,7 +144,7 @@ export function useRoomSession({ code, initialName = '', initialAvatar = '' }: S
         if (!cancelled) setStatus('setup');
         return;
       }
-      if (!/^[A-Z2-9]{6}$/.test(code)) {
+      if (!isValidRoomCode(code)) {
         if (!cancelled) {
           setErrorCode('INVALID_ROOM_CODE');
           setStatus('error');

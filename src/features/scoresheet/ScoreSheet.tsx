@@ -4,6 +4,7 @@ import { Crown } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { localizeNumber } from '@/lib/numbers';
 import { ROLE_EMOJI } from '@/components/roles/RoleSlip';
+import { topPlayerIds, totalScoresByPlayer } from '@/features/engine/engine';
 import type { RoundHistory, Role } from '@/types';
 
 export interface SheetPlayer {
@@ -31,24 +32,6 @@ interface ScoreSheetProps {
 const seatRotation = ['-1.4deg', '1deg', '-0.6deg', '1.5deg'];
 const inkRotation = ['-2deg', '1.3deg', '-1deg', '2.2deg'];
 
-function leaderIds(players: SheetPlayer[]): string[] {
-  if (players.length === 0) return [];
-  const topScore = Math.max(...players.map((player) => player.totalScore));
-  const topBabu = Math.max(
-    ...players.filter((player) => player.totalScore === topScore).map((player) => player.babuCount),
-  );
-  return players
-    .filter((player) => player.totalScore === topScore && player.babuCount === topBabu)
-    .map((player) => player.id);
-}
-
-function totalFromHistory(history: RoundHistory[], playerId: string): number {
-  return history.reduce(
-    (sum, round) => sum + (round.results.find((result) => result.playerId === playerId)?.points ?? 0),
-    0,
-  );
-}
-
 function makeRowMap(round: RoundHistory | undefined): Map<string, { role: Role; points: number }> {
   const map = new Map<string, { role: Role; points: number }>();
   if (!round) return map;
@@ -71,7 +54,8 @@ export function ScoreSheet({
 }: ScoreSheetProps) {
   const { t, i18n } = useTranslation();
   const language = i18n.language;
-  const leaders = leaderIds(players);
+  const leaders = topPlayerIds(players);
+  const totals = totalScoresByPlayer(history);
   const historyByRound = new Map(history.map((round) => [round.number, round]));
   const rows = Array.from({ length: totalRounds }, (_, index) => index + 1);
   const completed = history.length;
@@ -280,7 +264,7 @@ export function ScoreSheet({
                   {t('sheet.total')}
                 </th>
                 {players.map((player, index) => {
-                  const total = totalFromHistory(history, player.id);
+                  const total = totals[player.id] ?? 0;
                   return (
                     <td
                       key={player.id}

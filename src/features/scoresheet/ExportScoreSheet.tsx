@@ -9,6 +9,7 @@ import { ScoreSheet, type SheetPlayer } from './ScoreSheet';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { toast } from '@/hooks/useToastStore';
+import { shareFile } from '@/lib/share';
 import type { RoundHistory } from '@/types';
 
 interface ExportScoreSheetProps {
@@ -60,9 +61,9 @@ export function ExportScoreSheet({
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      toast(t('sheet.downloadPng'), 'success');
+      toast(t('sheet.downloadedPng'), 'success');
     } catch {
-      toast(t('errors.UNKNOWN'), 'error');
+      toast(t('result.downloadError'), 'error');
     } finally {
       setExporting(false);
     }
@@ -81,6 +82,7 @@ export function ExportScoreSheet({
       });
 
       const pdf = new jsPDF('p', 'mm', 'a4');
+      if (!img.width || !img.height) throw new Error('EMPTY_CAPTURE');
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       const ratio = Math.min(
@@ -91,9 +93,9 @@ export function ExportScoreSheet({
       const dy = (pageHeight - img.height * ratio) / 2;
       pdf.addImage(dataUrl, 'PNG', dx, dy, img.width * ratio, img.height * ratio);
       pdf.save(`${FILENAME}.pdf`);
-      toast(t('sheet.downloadPdf'), 'success');
+      toast(t('sheet.downloadedPdf'), 'success');
     } catch {
-      toast(t('errors.UNKNOWN'), 'error');
+      toast(t('result.downloadError'), 'error');
     } finally {
       setExporting(false);
     }
@@ -112,23 +114,20 @@ export function ExportScoreSheet({
         { type: 'image/png' },
       );
 
-      const title = t('sheet.shareTitle');
-      const text = t('sheet.shareText');
+      const outcome = await shareFile(
+        file,
+        t('sheet.shareTitle'),
+        t('sheet.shareText'),
+      );
 
-      if (navigator.share) {
-        try {
-          await navigator.share({ files: [file], title, text });
-        } catch {
-          // files not supported — fall back to sharing the image URL
-          await navigator.share({ title, text, url: dataUrl });
-        }
-      } else {
+      if (outcome === 'shared') {
+        toast(t('sheet.shared'), 'success');
+      } else if (outcome === 'unsupported') {
         toast(t('sheet.shareUnsupported'), 'info');
-        return;
       }
-      toast(t('sheet.shared'), 'success');
+      // 'cancelled' is a deliberate user action; stay quiet.
     } catch {
-      toast(t('errors.UNKNOWN'), 'error');
+      toast(t('result.shareError'), 'error');
     } finally {
       setExporting(false);
     }

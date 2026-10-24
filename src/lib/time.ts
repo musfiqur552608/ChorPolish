@@ -25,5 +25,7 @@ export function formatDate(language: string, date = new Date()): string {
 
 export function relativeMinutes(iso: string | null): number {
   if (!iso) return 99;
-  return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60_000));
+  const parsed = new Date(iso).getTime();
+  if (Number.isNaN(parsed)) return 99;
+  return Math.max(0, Math.floor((Date.now() - parsed) / 60_000));
 }

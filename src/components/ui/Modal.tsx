@@ -39,6 +39,10 @@ export function Modal({
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
+  // Keep the latest onClose without making the focus-trap effect re-run on
+  // every parent render (inline arrow props change identity constantly).
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!open) return;
@@ -59,7 +63,7 @@ export function Modal({
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== 'Tab') return;
@@ -94,7 +98,7 @@ export function Modal({
       document.body.style.overflow = previousOverflow;
       previousActive?.focus({ preventScroll: true });
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (typeof document === 'undefined') return null;
 

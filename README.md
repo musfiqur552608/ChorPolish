@@ -39,7 +39,7 @@ Output: `dist/` directory with static files.
 ```
 src/
 ├── features/
-│   ├── engine/          # Pure game engine (35/35 Vitest tests pass)
+│   ├── engine/          # Pure game engine (138/138 Vitest tests pass)
 │   ├── lobby/           # Lobby UI (LobbyView, RoomRoute, RoomPreviewView)
 │   ├── room/            # Game table (GameTable), session hook (useRoomSession)
 │   ├── scoresheet/      # ScoreSheet component
@@ -89,29 +89,26 @@ The old `003_cleanup_migration.sql` draft was **removed**: it redefined `finaliz
 
 `cleanup_rooms()` deletes rooms idle for 30 minutes or past `cleanup_at` (abandoned rooms get a 120-second download window), and prunes reactions older than one day. It is revoked from `anon`/`authenticated` and only runs from the cron job.
 
-### Vitest Tests
-Run with `npm run test`. Tests cover:
-- `getTargetForRound`: odd/even round target (Chor/Dakat)
-- `clockwiseAfter`: seat-order clockwise computation
-- `getShufflerForRound`: host rotation
-- `validateRoleAssignment`: role count/duplicate/missing checks
-- `scoreRound`: police catch/escape scoring
-- `rankPlayers`: competition ranking with Babu tie-break
-- `isTransitionAllowed`: all 12 phase transitions (SHUFFLE→DRAW→...→MATCH_END)
-- `nextTimedPhase`: timed phase successors
-- `nextRoundDestination`: next round vs MATCH_END
-- `isRoleVisibleTo`: role visibility policy (mirrors server)
-- `totalScoresByPlayer`: single/multi-round accumulation
-- `ALLOWED_TRANSITIONS`: all transition definitions
+### Automated Tests
+Run `npm.cmd run test`, or `npm.cmd run verify` for typecheck + tests + build.
+138 tests across 14 files cover:
+- Engine: target parity, draw order, shuffler rotation, scoring (Chor/Dakat), competition ranking, Babu tie-break, shared ranks, transitions, visibility, history dedupe
+- Config: zero-based slot contract, four seats, points, timers, avatars
+- Room codes: sanitising and validation against the database alphabet
+- Errors: longest-code matching, network/schema/auth mapping, translation fallback
+- Time/numbers: countdowns, clock offset, Bengali digits, English ordinals
+- Share/clipboard: invite URLs, Web Share outcomes, file sharing, clipboard fallback cleanup
+- Storage/request IDs/i18n storage: profile drafts, recent room, blocked storage, UUID fallback, language preference
+- i18n: identical English/Bengali keys and interpolation placeholders
+- Migrations/privacy: RLS/grants/publication secrecy, cascade deletes, leave hard-delete, cleanup, own-role gating, manual flow, safe pg_cron schedule, room code excluded from scorecards
 
-35 of 35 tests pass.
+138 of 138 tests pass. See [`TESTING.md`](TESTING.md) for the manual four-player checklist and SQL verification queries.
 
 ### Environment Variables
 Create `.env` (or verify existing):
 ```
 VITE_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
 VITE_SUPABASE_ANON_KEY=sb_publishable_YOUR_KEY
-VITE_ENABLE_DEMO=true   # Show bot demo on landing even without Supabase
 ```
 
 ### GitHub
@@ -158,7 +155,7 @@ VITE_ENABLE_DEMO=true   # Show bot demo on landing even without Supabase
 - `src/features/room/useRoomSession.ts` — Authoritative hook: boot, join/preview, room state, realtime presence, polling, deadline wakeups, actions (ready/start/pick/guess/advance/react/leave), error handling
 - `src/features/room/RoomRoute.tsx` — Full router: setup/error/closed/preview/joined/game states
 - `src/features/room/LobbyView.tsx` — Lobby UI with 4 seats, ready toggles, host controls, invite sheet
-- `src/features/room/GameTable.tsx` — Phase-driven game table (all 9 phases)
+- `src/features/room/GameTable.tsx` — Phase-driven game table (all 10 phases, including legacy `BABU_ORDER`)
 - `src/features/engine/engine.ts` — Pure game engine (no React/Supabase dependency)
 - `src/config/game.ts` — Central config: points, timers, avatars, phase durations
 - `src/i18n/locales/bn.ts` — Bengali (default) + English
@@ -168,39 +165,39 @@ VITE_ENABLE_DEMO=true   # Show bot demo on landing even without Supabase
 - Player goes offline after 40s of no activity (`isOnline: false`, `disconnectedAt` set)
 - `room.pausedAt` set when any player is offline
 - 90s grace period from `disconnectedAt`
-- If player returns within 90s: `heartbeat()` resets status, clears `pausedAt`, extends deadline by pause duration
-- If grace expires: `room.status = 'finished'`, `finishedReason = 'abandoned'`, all scores 0, all players share rank 1
-- Abandoned room has `cleanupAt = now() + 120s` — 120s download window before automatic deletion
-- ScoreSheet downloadable even after abandonment
+- If player returns within 90s: `sync_room` marks them online, clears `pausedAt`, and shifts deadlines by the pause duration
+- If grace expires: `finalize_room('abandoned')` keeps scores from completed rounds, computes `final_rank`, and sets `cleanupAt = now() + 120s`
+- Abandoned room has a 120-second download window before automatic deletion
+- ScoreSheet downloadable even after abandonment; the UI shows a partial-results banner and cleanup warning
 
 ### TypeScript & Build
-- `npm run typecheck` — clean (no errors)
-- `npm run build` — `✓ built in ~10s` (the PowerShell exit-code-1 is the known chunk-size stderr warning, not a failure)
-- 2045 modules transformed, gzip CSS ~55KB, JS ~729KB
+- `npm.cmd run typecheck` — clean
+- `npm.cmd run build` — `✓ built`
+- `npm.cmd run verify` — typecheck + 138 tests + production build
 
 ---
 
 ## 📦 What's Included
 
 ### ✅ Complete Features
-- Phases 1-3: Lobby UI, game table, all 9 phases with deadline countdowns
-- Phase 4: Pause/reconnect with 90s grace period
-- Phase 5: MATCH_END with final rankings, superlatives
-- Bengali default + English toggle
+- Lobby UI + game table for all 10 phases (manual flow + legacy `BABU_ORDER`)
+- Pause/reconnect with 90s grace; abandoned matches keep partial scores and a 120s download window
+- MATCH_END with competition ranking, shared ranks, Babu tie-break, partial/abandoned states
+- Bengali default + English toggle (key/interpolation parity enforced by tests)
 - Sound/haptics for all actions
 - Reduced motion support
-- Accessible How to Play modal
-- ScoreSheet (live, compact, captureMode)
-- Private own-slip reveal (only your own role/points after you pick)
-- PNG/PDF scorecard export + Web Share API
-- 35/35 Vitest engine tests passing
+- Accessible How to Play modal and focus-trapped dialogs
+- ScoreSheet (live, compact, captureMode) with private own-slip reveal
+- PNG/PDF scorecard export + Web Share API (room code excluded)
+- 138/138 automated tests (unit, static migration/security invariants)
 - 4 SQL migrations (001 → 002 → 004 → 005)
 - GitHub repository with full history
 
 ### 🔧 To Do (Low Priority)
 - Apply migrations 004/005 to the hosted Supabase project (manual flow is behind this)
-- Verify realtime integration with your Supabase project (may require Realtime enablement + RLS policy verification)
-- Set up Vitest wrappers for SQL migration tests
+- Enable anonymous sign-ins and pg_cron in the Supabase dashboard
+- Verify realtime integration against the hosted project after 004/005
+- See [`TESTING.md`](TESTING.md) for the manual four-player regression checklist
 
 ---
 

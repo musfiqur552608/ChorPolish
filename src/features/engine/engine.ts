@@ -183,12 +183,31 @@ export function toRankingEntries<T extends EnginePlayer>(
   }));
 }
 
+/**
+ * Ids of the players currently first: highest total, then highest Babu count.
+ * Equal score + equal Babu count are joint leaders. Used by the score sheet
+ * crown so it can never drift from the ranking rules.
+ */
+export function topPlayerIds(
+  players: readonly Pick<EnginePlayer, 'id' | 'totalScore' | 'babuCount'>[],
+): string[] {
+  if (players.length === 0) return [];
+  const topScore = Math.max(...players.map((player) => player.totalScore));
+  const topScorers = players.filter((player) => player.totalScore === topScore);
+  const topBabu = Math.max(...topScorers.map((player) => player.babuCount));
+  return topScorers
+    .filter((player) => player.babuCount === topBabu)
+    .map((player) => player.id);
+}
+
 export const ALLOWED_TRANSITIONS: Readonly<Record<Phase, readonly Phase[]>> = {
   SHUFFLE: ['DRAW'],
   DRAW: ['HIDDEN_ROLES'],
   HIDDEN_ROLES: ['BABU_REVEAL'],
   BABU_REVEAL: ['POLICE_REVEAL'],
-  POLICE_REVEAL: ['BABU_ORDER'],
+  // Manual flow: Police raises a hand and goes straight to choosing. BABU_ORDER
+  // is kept only so rounds dealt before migration 004 can finish.
+  POLICE_REVEAL: ['POLICE_GUESS', 'BABU_ORDER'],
   BABU_ORDER: ['POLICE_GUESS'],
   POLICE_GUESS: ['FINAL_REVEAL'],
   FINAL_REVEAL: ['ROUND_RESULT'],
@@ -207,18 +226,19 @@ export function nextTimedPhase(from: Phase): Phase | null {
       return 'DRAW';
     case 'HIDDEN_ROLES':
       return 'BABU_REVEAL';
-    case 'BABU_REVEAL':
-      return 'POLICE_REVEAL';
-    case 'POLICE_REVEAL':
-      return 'BABU_ORDER';
     case 'BABU_ORDER':
+      // Legacy rounds only: the manual flow jumps POLICE_REVEAL -> POLICE_GUESS.
       return 'POLICE_GUESS';
     case 'FINAL_REVEAL':
       return 'ROUND_RESULT';
+    case 'BABU_REVEAL':
+    case 'POLICE_REVEAL':
     case 'DRAW':
     case 'POLICE_GUESS':
     case 'ROUND_RESULT':
     case 'MATCH_END':
+      // Manual phases have no deadline; DRAW/POLICE_GUESS reset their clock
+      // after each individual action, so there is no single next phase.
       return null;
   }
 }
@@ -271,6 +291,21 @@ export function totalScoresByPlayer(
     }
   }
   return totals;
+}
+
+/**
+ * Add a just-finished round to the notebook without double-counting it. The
+ * authoritative state already includes a round once its results exist; the
+ * client-built fallback only fills the gap when a realtime snapshot lags.
+ */
+export function mergeRoundHistory(
+  history: readonly RoundHistory[],
+  round: RoundHistory,
+): RoundHistory[] {
+  if (history.some((entry) => entry.id === round.id || entry.number === round.number)) {
+    return [...history];
+  }
+  return [...history, round];
 }
 
 export interface FunStats {

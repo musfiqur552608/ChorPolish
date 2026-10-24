@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next';
 const KNOWN_CODES = new Set([
   'ROOM_NOT_FOUND',
   'ROOM_FULL',
+  'ROOM_CODE_COLLISION',
   'GAME_STARTED',
   'GAME_FINISHED',
   'ALREADY_IN_ROOM',
@@ -17,6 +18,7 @@ const KNOWN_CODES = new Set([
   'INVALID_NAME',
   'NOT_YOUR_TURN',
   'WRONG_PHASE',
+  'ROUND_NOT_FOUND',
   'PICKED_ALREADY',
   'SLOT_TAKEN',
   'ONLY_POLICE',
@@ -52,9 +54,13 @@ function extractMessage(error: unknown): string {
 export function normalizeApiError(error: unknown): NormalizedError {
   const rawMessage = extractMessage(error);
   const upper = rawMessage.toUpperCase();
+  // Match the longest known code first: e.g. "PLAYERS_NOT_READY" also contains
+  // "NOT_READY", and the more specific code must win.
   const match = KNOWN_CODES.has(upper)
     ? upper
-    : [...KNOWN_CODES].find((code) => upper.includes(code));
+    : [...KNOWN_CODES]
+        .sort((a, b) => b.length - a.length)
+        .find((code) => upper.includes(code));
   if (match) return { code: match, rawMessage };
 
   if (/failed to fetch|networkerror|load failed|network request failed|fetch/i.test(rawMessage)) {

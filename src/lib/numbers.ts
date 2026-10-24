@@ -11,6 +11,17 @@ export function ordinalPlace(rank: number, language: string): string {
     const labels = ['', 'প্রথম', 'দ্বিতীয়', 'তৃতীয়', 'চতুর্থ'];
     return labels[rank] ?? `${localizeNumber(rank, language)}তম`;
   }
-  const labels = ['', '1st', '2nd', '3rd', '4th'];
-  return labels[rank] ?? `${rank}th`;
+  const absolute = Math.abs(Math.trunc(rank));
+  const mod100 = absolute % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${rank}th`;
+  switch (absolute % 10) {
+    case 1:
+      return `${rank}st`;
+    case 2:
+      return `${rank}nd`;
+    case 3:
+      return `${rank}rd`;
+    default:
+      return `${rank}th`;
+  }
 }

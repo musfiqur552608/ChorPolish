@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
@@ -30,6 +30,7 @@ import { userErrorMessage } from '@/lib/errors';
 import { haptics } from '@/lib/haptics';
 import { localizeNumber } from '@/lib/numbers';
 import { loadProfileDraft, saveProfileDraft, saveRecentRoom } from '@/lib/profileDraft';
+import { isValidRoomCode, ROOM_CODE_LENGTH, sanitizeRoomCode } from '@/lib/roomCode';
 import { sound } from '@/lib/sound';
 import { createRequestId } from '@/lib/requestId';
 import { createRoom, joinRoom } from '@/lib/supabase/api';
@@ -39,25 +40,20 @@ import type { Role } from '@/types';
 type Tab = 'create' | 'join';
 type RoundChoice = number | 'custom';
 
-const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const draft = loadProfileDraft();
-
-function sanitizeCode(value: string): string {
-  return value
-    .toUpperCase()
-    .split('')
-    .filter((character) => CODE_ALPHABET.includes(character))
-    .join('')
-    .slice(0, 6);
-}
+const draftAvatar =
+  draft && (GAME_CONFIG.avatars as readonly string[]).includes(draft.avatar)
+    ? draft.avatar
+    : GAME_CONFIG.avatars[0];
 
 export function LandingPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const pushToast = useToastStore((state) => state.push);
-  const [tab, setTab] = useState<Tab>('create');
+  const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'join' ? 'join' : 'create');
   const [name, setName] = useState(draft?.name ?? '');
-  const [avatar, setAvatar] = useState(draft?.avatar ?? GAME_CONFIG.avatars[0]);
+  const [avatar, setAvatar] = useState(draftAvatar);
   const [roundChoice, setRoundChoice] = useState<RoundChoice>(8);
   const [customRounds, setCustomRounds] = useState('6');
   const [code, setCode] = useState('');
@@ -70,7 +66,7 @@ export function LandingPage() {
   const roundsValid =
     Number.isInteger(rounds) && rounds >= GAME_CONFIG.minRounds && rounds <= GAME_CONFIG.maxRounds;
   const nameValid = name.trim().length >= 1 && name.trim().length <= 20;
-  const codeValid = code.length === 6;
+  const codeValid = isValidRoomCode(code);
 
   function resetError() {
     setError(null);
@@ -331,14 +327,14 @@ export function LandingPage() {
                           label={t('landing.codeLabel')}
                           value={code}
                           onChange={(event) => {
-                            setCode(sanitizeCode(event.target.value));
+                            setCode(sanitizeRoomCode(event.target.value));
                             resetError();
                           }}
                           placeholder={t('landing.codePlaceholder')}
                           autoCapitalize="characters"
                           autoComplete="off"
                           spellCheck={false}
-                          maxLength={6}
+                          maxLength={ROOM_CODE_LENGTH}
                           inputMode="text"
                           leading={<Link2 className="h-4 w-4" aria-hidden />}
                           className="h-14 text-center font-mono text-2xl font-bold uppercase tracking-[0.35em] placeholder:tracking-[0.2em] placeholder:text-base"
@@ -627,20 +623,6 @@ export function LandingPage() {
               </article>
             ))}
           </div>
-
-          {isSupabaseConfigured && (
-            <div className="mt-10 flex flex-col items-center justify-center gap-2 text-center">
-              <span className="font-hand text-lg text-ink-soft">{t('landing.demoHint')}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/demo')}
-                rightIcon={<ArrowRight className="h-3.5 w-3.5" aria-hidden />}
-              >
-                {t('landing.demoButton')}
-              </Button>
-            </div>
-          )}
 
           <div className="mt-14 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-ink/10 pt-6 text-center text-[12px] text-ink-faint">
             <span className="font-hand text-base text-ink-soft">{t('landing.footer')}</span>

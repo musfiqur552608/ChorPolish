@@ -8,7 +8,17 @@ export type Language = 'bn' | 'en';
 
 export function storedLanguage(): Language {
   if (typeof window === 'undefined') return 'bn';
-  return window.localStorage.getItem(LANG_STORAGE_KEY) === 'en' ? 'en' : 'bn';
+  try {
+    return window.localStorage.getItem(LANG_STORAGE_KEY) === 'en' ? 'en' : 'bn';
+  } catch {
+    return 'bn';
+  }
+}
+
+function applyDocumentLanguage(language: Language): void {
+  if (typeof document === 'undefined') return;
+  document.documentElement.lang = language;
+  document.documentElement.classList.toggle('bn', language === 'bn');
 }
 
 void i18n.use(initReactI18next).init({
@@ -25,12 +35,14 @@ void i18n.use(initReactI18next).init({
 
 export function changeLanguage(language: Language): void {
   void i18n.changeLanguage(language);
-  window.localStorage.setItem(LANG_STORAGE_KEY, language);
-  document.documentElement.lang = language;
-  document.documentElement.classList.toggle('bn', language === 'bn');
+  try {
+    window.localStorage.setItem(LANG_STORAGE_KEY, language);
+  } catch {
+    // Private mode / storage blocked: the choice still applies for this visit.
+  }
+  applyDocumentLanguage(language);
 }
 
-document.documentElement.lang = i18n.language;
-document.documentElement.classList.toggle('bn', i18n.language === 'bn');
+applyDocumentLanguage(i18n.language === 'en' ? 'en' : 'bn');
 
 export default i18n;

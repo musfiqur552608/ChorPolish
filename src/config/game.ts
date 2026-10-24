@@ -9,6 +9,8 @@ export const GAME_CONFIG = {
   seats: 4,
   minPlayers: 4,
   maxPlayers: 4,
+  /** Zero-based slip slots, matching round_roles.slot / pick_slip(). */
+  slots: [0, 1, 2, 3] as const,
   minRounds: 1,
   maxRounds: 30,
   roundPresets: [4, 8, 12, 16] as const,
