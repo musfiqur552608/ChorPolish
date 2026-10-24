@@ -33,6 +33,7 @@ export interface RoomSummary {
   finishedReason: FinishedReason;
   cleanupAt: string | null;
   pausedAt: string | null;
+  stateVersion?: number;
   serverNow: string;
 }
 
@@ -77,6 +78,9 @@ export interface RoundLive {
   drawOrder: string[];
   guessPlayerId: string | null;
   guessCorrect: boolean | null;
+  babuRisenAt?: string | null;
+  policeCalledAt?: string | null;
+  policeRisenAt?: string | null;
   publicRoles: Partial<Record<string, Role>>;
   results: RoundResultRow[];
 }
@@ -125,6 +129,9 @@ export type GameAction =
   | 'start'
   | 'set_rounds'
   | 'pick_slip'
+  | 'babu_rise'
+  | 'ask_police'
+  | 'police_rise'
   | 'guess'
   | 'advance'
   | 'react'

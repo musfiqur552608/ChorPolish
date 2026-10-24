@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Modal } from '@/components/ui/Modal';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
-import { RoleSlip } from '@/components/roles/RoleSlip';
+import { RoleBadge, RoleSlip } from '@/components/roles/RoleSlip';
 import { AvatarPicker } from '@/components/ui/AvatarPicker';
 import { GAME_CONFIG } from '@/config/game';
 import { toast } from '@/hooks/useToastStore';
@@ -23,16 +23,16 @@ import { localizeNumber } from '@/lib/numbers';
 import { haptics } from '@/lib/haptics';
 import { sound } from '@/lib/sound';
 import { ScoreSheet } from '@/features/scoresheet/ScoreSheet';
-import { useRoomSession } from './useRoomSession';
+import type { RoomSession } from './useRoomSession';
 import type { Role } from '@/types';
 
 const REACTIONS = GAME_CONFIG.reactions;
 
 interface GameTableProps {
-  code: string;
+  session: RoomSession;
 }
 
-export function GameTable({ code }: GameTableProps) {
+export function GameTable({ session }: GameTableProps) {
   const { t, i18n } = useTranslation();
   const language = i18n.language;
 
@@ -43,12 +43,15 @@ export function GameTable({ code }: GameTableProps) {
     connected,
     pick,
     guess,
+    babuRise,
+    askPolice,
+    policeRise,
     advance,
     react,
     updateAvatar,
     leave,
     retry,
-  } = useRoomSession({ code: code?.toUpperCase() ?? '' });
+  } = session;
 
   const room = state?.room;
   const round = state?.round ?? null;
@@ -112,6 +115,28 @@ export function GameTable({ code }: GameTableProps) {
   const revealedRoleFor = (playerId: string): Role | undefined =>
     (publicRoles[playerId] as Role | undefined) ?? undefined;
 
+  const myRole = me?.role ?? null;
+  const isBabu = myRole === 'BABU';
+  const isPolice = myRole === 'POLICE';
+  const babuRisen = Boolean(round?.babuRisenAt);
+  const policeCalled = Boolean(round?.policeCalledAt);
+  const policeRisen = Boolean(round?.policeRisenAt);
+  // Rounds dealt before the manual-flow migration have no timestamps at all.
+  // In that case we keep the old automatic presentation until the migration
+  // is applied, instead of leaving every table stuck on a dead button.
+  const manualFlowSupported = Boolean(round && 'babuRisenAt' in round);
+
+  const shuffler = players.find((p) => p.id === round?.shufflerId);
+  const policePlayer = players.find((p) => revealedRoleFor(p.id) === 'POLICE');
+  const babuPlayer = players.find((p) => revealedRoleFor(p.id) === 'BABU');
+
+  // Everyone knows Babu and Police by this point; the two remaining players
+  // are the only possible Chor/Dakat slips.
+  const hiddenPlayers = players.filter(
+    (p) => revealedRoleFor(p.id) !== 'BABU' && revealedRoleFor(p.id) !== 'POLICE',
+  );
+  const guessPickedPlayer = players.find((p) => p.id === round?.guessPlayerId) ?? null;
+
   const allFilled = players.length === GAME_CONFIG.seats;
 
   const targetLabel = round?.targetRole
@@ -157,6 +182,22 @@ export function GameTable({ code }: GameTableProps) {
     sound.play('write');
   }, [advance, round?.phase]);
 
+  // ── Manual reveal steps ──
+  const handleBabuRise = useCallback(async () => {
+    playClick();
+    await babuRise();
+  }, [babuRise]);
+
+  const handleAskPolice = useCallback(async () => {
+    playClick();
+    await askPolice();
+  }, [askPolice]);
+
+  const handlePoliceRise = useCallback(async () => {
+    playClick();
+    await policeRise();
+  }, [policeRise]);
+
   const handleReact = useCallback(
     async (emoji: string) => {
       playClick();
@@ -189,10 +230,12 @@ export function GameTable({ code }: GameTableProps) {
       case 'SHUFFLE': return t('game.shuffler');
       case 'DRAW': return t('game.drawTitle');
       case 'HIDDEN_ROLES': return t('game.hiddenTitle');
-      case 'BABU_REVEAL': return t('game.babuRevealTitle');
-      case 'POLICE_REVEAL': return t('game.policeRevealTitle');
+      case 'BABU_REVEAL': return !manualFlowSupported
+        ? t('game.babuRevealTitle')
+        : babuRisen ? t('game.babuRisenTitle') : t('game.babuRiseTitle');
+      case 'POLICE_REVEAL': return t('game.policeQuestionTitle');
       case 'BABU_ORDER': return t('game.orderTitle');
-      case 'POLICE_GUESS': return t('game.guessYourTurn');
+      case 'POLICE_GUESS': return t('game.policePickTitle');
       case 'FINAL_REVEAL': return t('game.revealTitle');
       case 'ROUND_RESULT': return t('game.roundResultTitle', { round: currentRoundNumber });
       case 'MATCH_END': return t('result.title');
@@ -205,25 +248,18 @@ export function GameTable({ code }: GameTableProps) {
       case 'SHUFFLE': return t('game.shufflingSub');
       case 'DRAW': return isMyTurnToPick ? t('game.drawYourTurn') : t('game.drawHint');
       case 'HIDDEN_ROLES': return t('game.hiddenSub');
-      case 'BABU_REVEAL': return t('game.babuSpeech');
-      case 'POLICE_REVEAL': return t('game.policeSpeech');
+      case 'BABU_REVEAL': return !manualFlowSupported
+        ? t('game.babuSpeech')
+        : babuRisen ? t('game.babuAskSub') : t('game.babuRiseSub');
+      case 'POLICE_REVEAL': return t('game.policeQuestionSub');
       case 'BABU_ORDER': return t('game.orderSub');
-      case 'POLICE_GUESS': return t('game.guessHint', { target: targetLabel });
+      case 'POLICE_GUESS': return t('game.policePickSub', { target: targetLabel });
       case 'FINAL_REVEAL': return t('game.finalRevealSub');
       case 'ROUND_RESULT': return t('game.roundResultSub');
       case 'MATCH_END': return t('result.subtitle');
       default: return '';
     }
   };
-
-  const shuffler = players.find((p) => p.id === round?.shufflerId);
-  const policePlayer = players.find((p) => revealedRoleFor(p.id) === 'POLICE');
-  const babuPlayer = players.find((p) => revealedRoleFor(p.id) === 'BABU');
-
-  // Two hidden players (not Babu/Police) for the guess phase
-  const hiddenPlayers = players.filter(
-    (p) => p.id !== me?.id && revealedRoleFor(p.id) !== 'BABU' && revealedRoleFor(p.id) !== 'POLICE',
-  );
 
   // ── Renderers per phase ──
   const renderPhaseHeader = () => (
@@ -236,8 +272,16 @@ export function GameTable({ code }: GameTableProps) {
           <span className="font-display text-[18px] font-bold leading-none text-ink">{t('common.round')} {localizeNumber(currentRoundNumber, language)}</span>
         </div>
         <div className="flex items-end gap-1.5 text-right">
-          <span className="font-mono text-[20px] font-bold text-terracotta">{secondsLeft()}</span>
-          <span className="text-[11px] font-semibold text-ink-soft">{t('common.seconds', { count: secondsLeft() })}</span>
+          {round?.phaseDeadline ? (
+            <>
+              <span className="font-mono text-[20px] font-bold text-terracotta">{secondsLeft()}</span>
+              <span className="text-[11px] font-semibold text-ink-soft">{t('common.seconds', { count: secondsLeft() })}</span>
+            </>
+          ) : (
+            <span className="rounded-full border border-ink/10 bg-paper-light px-2.5 py-0.5 text-[10px] font-semibold text-ink-soft">
+              {t('game.noClock')}
+            </span>
+          )}
         </div>
       </div>
       <div className="paper rounded-[10px] border border-ink/10 p-4 sm:p-5 shadow-sm">
@@ -327,42 +371,352 @@ export function GameTable({ code }: GameTableProps) {
     );
   };
 
-  const renderGuessTargets = () => {
-    if (round?.phase !== 'POLICE_GUESS') return null;
+  // ── Manual-flow screens ────────────────────────────────────────────────────
+
+  const renderBabuReveal = () => {
+    // Before the rise, only Babu's own screen may show the Babu slip. Everyone
+    // else sees a closed slip — exactly like eyes-closed at a real table.
+    const showFace = isBabu || babuRisen;
+    const publicBabu = babuPlayer ?? (isBabu ? mePlayer : null);
+    const asking = babuRisen && !policeCalled;
+
     return (
-      <div className="grid grid-cols-2 gap-3">
-        {hiddenPlayers.map((player) => {
-          const selected = guessTargetId === player.id;
-          const disabled = busy === 'guess' || round.guessPlayerId !== null;
-          return (
-            <button
-              key={player.id}
-              type="button"
-              disabled={disabled || selected}
-              onClick={() => void handleGuess(player.id)}
-              className={cn(
-                'relative rounded-[10px] border-2 p-4 shadow-sm transition-all',
-                selected
-                  ? 'border-mustard bg-mustard/[0.10]'
-                  : 'border-ink/10 bg-paper-light hover:border-ink/30',
-                disabled && 'opacity-60 pointer-events-none',
-              )}
-            >
-              <div className="flex flex-col items-center gap-2">
-                <span className="text-3xl">{player.avatar}</span>
-                <span className="font-display text-sm font-bold text-ink">{player.name}</span>
-                {selected && (
-                  <span className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full border border-mustard bg-mustard text-[9px] font-bold text-ink shadow-sm">
-                    <Check className="h-3 w-3" aria-hidden />
-                  </span>
+      <section className="space-y-4">
+        <div className="paper relative overflow-hidden rounded-[12px] border border-ink/10 p-6 text-center shadow-paper-lift sm:p-8">
+          <div className="tape -top-3 left-1/2 h-6 w-24 -translate-x-1/2 rotate-[-1deg]" aria-hidden />
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-faint">
+            {t('game.babuSeat')}
+          </p>
+
+          <div className="mt-4 flex flex-col items-center gap-3">
+            <RoleSlip
+              role={showFace ? 'BABU' : null}
+              faceDown={!showFace}
+              size="hero"
+              animateIn
+            />
+            <h2 className="font-display text-xl font-bold text-ink sm:text-2xl">
+              {!babuRisen
+                ? t('game.babuRiseTitle')
+                : asking
+                  ? t('game.babuRisenTitle')
+                  : t('game.babuAskDoneTitle')}
+            </h2>
+            <p className="max-w-sm text-sm leading-relaxed text-ink-soft">
+              {!babuRisen
+                ? isBabu
+                  ? t('game.youAreBabuBody')
+                  : t('game.babuRiseSub')
+                : asking
+                  ? isBabu
+                    ? t('game.babuAskBody')
+                    : t('game.babuRisenBody', { name: publicBabu?.name ?? '' })
+                  : t('game.policeQuestionSub')}
+            </p>
+          </div>
+
+          {!babuRisen && isBabu && (
+            <div className="mt-6">
+              <Button
+                fullWidth
+                size="lg"
+                variant="primary"
+                loading={busy === 'babu_rise'}
+                disabled={Boolean(busy) && busy !== 'babu_rise'}
+                onClick={() => void handleBabuRise()}
+                leftIcon={<Crown className="h-4 w-4" aria-hidden />}
+              >
+                {t('game.babuRiseButton')}
+              </Button>
+              <p className="mt-2 text-[12px] text-ink-soft">{t('game.keepSecret')}</p>
+            </div>
+          )}
+
+          {!babuRisen && !isBabu && (
+            <p className="mt-6 rounded-lg border border-ink/10 bg-paper-deep/20 px-4 py-3 text-sm text-ink-soft">
+              {t('game.babuWaitOthers')}
+            </p>
+          )}
+
+          {babuRisen && isBabu && asking && (
+            <div className="mt-6">
+              <Button
+                fullWidth
+                size="lg"
+                variant="primary"
+                loading={busy === 'ask_police'}
+                disabled={Boolean(busy) && busy !== 'ask_police'}
+                onClick={() => void handleAskPolice()}
+                leftIcon={<UserRound className="h-4 w-4" aria-hidden />}
+              >
+                {t('game.babuAskButton')}
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-4 gap-2">
+          {players.map((player) => {
+            const role = revealedRoleFor(player.id);
+            return (
+              <div
+                key={player.id}
+                className={cn(
+                  'flex min-w-0 flex-col items-center gap-1 rounded-lg border px-2 py-2 text-center',
+                  role === 'BABU'
+                    ? 'border-mustard bg-mustard/[0.10]'
+                    : 'border-ink/10 bg-paper-light/60',
                 )}
+              >
+                <span className="text-xl" aria-hidden>{player.avatar}</span>
+                <span className="w-full truncate text-[10px] font-semibold text-ink">{player.name}</span>
+                {role === 'BABU' && <RoleBadge role="BABU" size="sm" className="scale-90" />}
               </div>
-            </button>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      </section>
     );
   };
+
+  const renderPoliceReveal = () => {
+    const showFace = isPolice || policeRisen;
+    return (
+      <section className="space-y-4">
+        <div className="paper relative overflow-hidden rounded-[12px] border border-ink/10 p-6 text-center shadow-paper-lift sm:p-8">
+          <div className="tape -top-3 left-1/2 h-6 w-24 -translate-x-1/2 rotate-[-1deg]" aria-hidden />
+
+          <div className="flex items-center justify-center gap-2">
+            <RoleBadge role="BABU" size="sm" />
+            <span className="text-xs text-ink-soft">→</span>
+            <RoleBadge role="POLICE" size="sm" showName={false} />
+          </div>
+
+          <h2 className="mt-3 font-display text-xl font-bold text-ink sm:text-2xl">
+            {t('game.policeQuestionTitle')}
+          </h2>
+          <p className="mx-auto mt-1 max-w-sm text-sm leading-relaxed text-ink-soft">
+            {t('game.policeQuestionLine', { name: babuPlayer?.name ?? '' })}
+          </p>
+
+          <div className="mt-5 flex flex-col items-center gap-3">
+            <RoleSlip
+              role={showFace ? 'POLICE' : null}
+              faceDown={!showFace}
+              size="hero"
+              animateIn
+            />
+            <p className="font-display text-lg font-bold text-ink">
+              {isPolice ? t('game.youArePolice') : t('game.policeRising')}
+            </p>
+            <p className="max-w-sm text-sm leading-relaxed text-ink-soft">
+              {isPolice ? t('game.policeRiseSub') : t('game.policeRiseOtherSub')}
+            </p>
+          </div>
+
+          {isPolice && (
+            <div className="mt-6">
+              <Button
+                fullWidth
+                size="lg"
+                variant="primary"
+                loading={busy === 'police_rise'}
+                disabled={Boolean(busy) && busy !== 'police_rise'}
+                onClick={() => void handlePoliceRise()}
+                leftIcon={<Check className="h-4 w-4" aria-hidden />}
+              >
+                {t('game.policeRiseButton')}
+              </Button>
+              <p className="mt-2 text-[12px] text-ink-soft">{t('game.keepSecret')}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-4 gap-2">
+          {players.map((player) => {
+            const role = revealedRoleFor(player.id);
+            return (
+              <div
+                key={player.id}
+                className={cn(
+                  'flex min-w-0 flex-col items-center gap-1 rounded-lg border px-2 py-2 text-center',
+                  role === 'POLICE'
+                    ? 'border-teal bg-teal/[0.08]'
+                    : 'border-ink/10 bg-paper-light/60',
+                )}
+              >
+                <span className="text-xl" aria-hidden>{player.avatar}</span>
+                <span className="w-full truncate text-[10px] font-semibold text-ink">{player.name}</span>
+                {role === 'POLICE' && <RoleBadge role="POLICE" size="sm" className="scale-90" />}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    );
+  };
+
+  const renderPoliceGuess = () => {
+    const picked = guessPickedPlayer;
+    const canPick = isMyTurnToGuess;
+
+    return (
+      <section className="space-y-4">
+        <div className={cn(
+          'paper flex items-center gap-3 rounded-[12px] border p-4 shadow-sm',
+          policePlayer ? 'border-teal/40 bg-teal/[0.04]' : 'border-ink/10',
+        )}>
+          <RoleSlip role="POLICE" size="sm" showBrand={false} />
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-faint">
+              {t('game.policeRisenTag')}
+            </p>
+            <p className="truncate font-display text-lg font-bold text-ink">
+              {policePlayer?.name ?? t('game.spectator')}
+            </p>
+            <p className="text-sm leading-snug text-ink-soft">
+              {picked
+                ? t('game.policePicked', { name: picked.name })
+                : isPolice
+                  ? t('game.policeChooseSub', { target: targetLabel })
+                  : t('game.policeChoosing', { name: policePlayer?.name ?? '' })}
+            </p>
+          </div>
+          {picked && <Check className="h-6 w-6 shrink-0 text-leaf" aria-hidden />}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {hiddenPlayers.map((player) => {
+            const pickedThis = picked?.id === player.id;
+            const disabled = !canPick || busy === 'guess';
+            return (
+              <button
+                key={player.id}
+                type="button"
+                disabled={disabled}
+                onClick={() => void handleGuess(player.id)}
+                className={cn(
+                  'relative flex flex-col items-center gap-2 rounded-[12px] border-2 p-5 shadow-sm transition-all',
+                  pickedThis
+                    ? 'border-leaf bg-leaf/[0.08]'
+                    : canPick
+                      ? 'border-ink/10 bg-paper-light hover:-translate-y-0.5 hover:border-mustard'
+                      : 'border-ink/10 bg-paper-light/70',
+                  !canPick && !pickedThis && 'opacity-70',
+                )}
+              >
+                <span className="text-4xl" aria-hidden>{player.avatar}</span>
+                <span className="max-w-full truncate font-display text-sm font-bold text-ink">
+                  {player.name}
+                </span>
+                {pickedThis && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-leaf/30 bg-leaf/10 px-2 py-0.5 text-[10px] font-bold text-leaf">
+                    <Check className="h-3 w-3" aria-hidden />
+                    {t('game.policePickTag')}
+                  </span>
+                )}
+                {canPick && !pickedThis && (
+                  <span className="text-[10px] font-semibold text-ink-soft">
+                    {t('game.guessTapSeat')}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="text-center text-sm text-ink-soft">
+          {picked
+            ? t('game.policePickedWait')
+            : isPolice
+              ? t('game.guessYourTurn')
+              : t('game.policeChoosing', { name: policePlayer?.name ?? '' })}
+        </p>
+      </section>
+    );
+  };
+
+  const renderFinalReveal = () => {
+    const caught = round?.guessCorrect ?? false;
+    return (
+      <section className="space-y-4">
+        <div className={cn(
+          'rounded-[12px] border-2 p-5 text-center shadow-sm',
+          caught ? 'border-leaf bg-leaf/[0.06]' : 'border-terracotta bg-terracotta/[0.06]',
+        )}>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-faint">
+            {t('game.policePickTag')}
+          </p>
+          <h2 className="mt-1 font-display text-xl font-bold text-ink sm:text-2xl">
+            {guessPickedPlayer
+              ? t('game.policePicked', { name: guessPickedPlayer.name })
+              : t('game.revealTitle')}
+          </h2>
+          <p className="mt-1 text-sm font-semibold text-ink-soft">
+            {caught ? t('game.verdictCaught') : t('game.verdictEscaped')}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {players.map((player) => {
+            const role = revealedRoleFor(player.id);
+            const picked = player.id === round?.guessPlayerId;
+            return (
+              <div
+                key={player.id}
+                className={cn(
+                  'relative flex flex-col items-center gap-1.5 rounded-[12px] border-2 p-4 text-center shadow-sm',
+                  picked ? 'border-mustard bg-mustard/[0.08]' : 'border-ink/10 bg-paper-light',
+                )}
+              >
+                <span className="text-4xl" aria-hidden>{player.avatar}</span>
+                <span className="max-w-full truncate font-display text-sm font-bold text-ink">
+                  {player.name}
+                </span>
+                {role && <RoleBadge role={role} size="sm" />}
+                {picked && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#6a4a0d]">
+                    {t('game.policePickTag')}
+                  </span>
+                )}
+                {player.id === me?.id && (
+                  <span className="text-[10px] font-semibold text-ink-faint">{t('sheet.meMark')}</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    );
+  };
+
+  const renderLegacyReveal = () => (
+    <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 space-y-6">
+      {round?.phase === 'BABU_REVEAL' && babuPlayer && (
+        <div className="flex flex-col items-center justify-center min-h-[240px]">
+          <RoleSlip size="hero" role="BABU" animateIn />
+          <p className="mt-4 text-sm font-semibold text-ink">
+            {babuPlayer.avatar} {babuPlayer.name} — {t('game.babuSpeech')}
+          </p>
+        </div>
+      )}
+      {round?.phase === 'POLICE_REVEAL' && policePlayer && (
+        <div className="flex flex-col items-center justify-center min-h-[240px]">
+          <RoleSlip size="hero" role="POLICE" animateIn />
+          <p className="mt-4 text-sm font-semibold text-ink">
+            {policePlayer.avatar} {policePlayer.name} — {t('game.policeSpeech')}
+          </p>
+        </div>
+      )}
+      {round?.phase === 'BABU_ORDER' && babuPlayer && (
+        <div className="flex flex-col items-center justify-center min-h-[240px]">
+          <span className="text-4xl mb-2">{babuPlayer.avatar}</span>
+          <p className="font-display text-lg font-bold text-ink">{t('game.orderFind', { role: targetLabel })}</p>
+          <p className="mt-1 text-sm text-ink-soft">{t('game.orderSub')}</p>
+        </div>
+      )}
+    </div>
+  );
 
   const renderRoundResult = () => {
     const roundResults = round?.results ?? [];
@@ -564,15 +918,6 @@ export function GameTable({ code }: GameTableProps) {
     bodyContent = renderRoundResult();
   } else if (round?.phase === 'MATCH_END') {
     bodyContent = renderMatchEnd();
-  } else if (round?.phase === 'POLICE_GUESS') {
-    bodyContent = (
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 space-y-6">
-        {renderGuessTargets()}
-        <p className="text-center text-sm text-ink-soft">
-          {isMyTurnToGuess ? t('game.guessYourTurn') : t('game.guessTurn', { name: policePlayer?.name ?? '' })}
-        </p>
-      </div>
-    );
   } else if (round?.phase === 'SHUFFLE' || round?.phase === 'DRAW') {
     bodyContent = (
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 space-y-6">
@@ -603,35 +948,34 @@ export function GameTable({ code }: GameTableProps) {
         <p className="mt-6 text-sm text-ink-soft">{t('game.drawWaiting')}</p>
       </div>
     );
-  } else {
-    // BABU_REVEAL, POLICE_REVEAL, BABU_ORDER
+  } else if (round?.phase === 'BABU_REVEAL') {
+    bodyContent = manualFlowSupported ? (
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        {renderBabuReveal()}
+      </div>
+    ) : renderLegacyReveal();
+  } else if (round?.phase === 'POLICE_REVEAL') {
+    bodyContent = manualFlowSupported ? (
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        {renderPoliceReveal()}
+      </div>
+    ) : renderLegacyReveal();
+  } else if (round?.phase === 'BABU_ORDER') {
+    bodyContent = renderLegacyReveal();
+  } else if (round?.phase === 'POLICE_GUESS') {
     bodyContent = (
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 space-y-6">
-        {round?.phase === 'BABU_REVEAL' && babuPlayer && (
-          <div className="flex flex-col items-center justify-center min-h-[240px]">
-            <RoleSlip size="hero" role="BABU" animateIn />
-            <p className="mt-4 text-sm font-semibold text-ink">
-              {babuPlayer.avatar} {babuPlayer.name} — {t('game.babuSpeech')}
-            </p>
-          </div>
-        )}
-        {round?.phase === 'POLICE_REVEAL' && policePlayer && (
-          <div className="flex flex-col items-center justify-center min-h-[240px]">
-            <RoleSlip size="hero" role="POLICE" animateIn />
-            <p className="mt-4 text-sm font-semibold text-ink">
-              {policePlayer.avatar} {policePlayer.name} — {t('game.policeSpeech')}
-            </p>
-          </div>
-        )}
-        {round?.phase === 'BABU_ORDER' && babuPlayer && (
-          <div className="flex flex-col items-center justify-center min-h-[240px]">
-            <span className="text-4xl mb-2">{babuPlayer.avatar}</span>
-            <p className="font-display text-lg font-bold text-ink">{t('game.orderFind', { role: targetLabel })}</p>
-            <p className="mt-1 text-sm text-ink-soft">{t('game.orderSub')}</p>
-          </div>
-        )}
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        {renderPoliceGuess()}
       </div>
     );
+  } else if (round?.phase === 'FINAL_REVEAL') {
+    bodyContent = (
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        {renderFinalReveal()}
+      </div>
+    );
+  } else {
+    bodyContent = null;
   }
 
   return (

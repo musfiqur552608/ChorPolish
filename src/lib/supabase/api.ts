@@ -75,6 +75,18 @@ export async function pickSlip(roomId: string, slot: number): Promise<void> {
   await rpc('pick_slip', { p_room_id: roomId, p_slot: slot });
 }
 
+export async function babuRise(roomId: string): Promise<RoomState> {
+  return rpc('babu_rise', { p_room_id: roomId });
+}
+
+export async function askPolice(roomId: string): Promise<RoomState> {
+  return rpc('ask_police', { p_room_id: roomId });
+}
+
+export async function policeRise(roomId: string): Promise<RoomState> {
+  return rpc('police_rise', { p_room_id: roomId });
+}
+
 export async function policeGuess(roomId: string, playerId: string): Promise<void> {
   await rpc('police_guess', { p_room_id: roomId, p_guessed_player_id: playerId });
 }

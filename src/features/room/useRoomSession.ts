@@ -5,6 +5,8 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { PeekRoom, RoomState } from '@/types';
 import {
   advancePhase,
+  askPolice as askPoliceRequest,
+  babuRise as babuRiseRequest,
   changeAvatar,
   getRoomState,
   joinRoom,
@@ -12,6 +14,7 @@ import {
   peekRoom,
   pickSlip,
   policeGuess,
+  policeRise as policeRiseRequest,
   sendReaction,
   setReady,
   setRounds,
@@ -61,6 +64,7 @@ const ROOM_CHANGE_KEYS = [
   'finished_reason',
   'paused_at',
   'cleanup_at',
+  'state_version',
 ];
 
 const SUBSCRIBED_ROOMS = new Set<string>();
@@ -496,6 +500,36 @@ export function useRoomSession({ code, initialName = '', initialAvatar = '' }: S
     [roomId, runAction],
   );
 
+  const babuRise = useCallback(async () => {
+    if (!roomId) return false;
+    haptics.tap();
+    return runAction(
+      'babu_rise',
+      async () => babuRiseRequest(roomId),
+      'write',
+    );
+  }, [roomId, runAction]);
+
+  const askPolice = useCallback(async () => {
+    if (!roomId) return false;
+    haptics.tap();
+    return runAction(
+      'ask_police',
+      async () => askPoliceRequest(roomId),
+      'click',
+    );
+  }, [roomId, runAction]);
+
+  const policeRise = useCallback(async () => {
+    if (!roomId) return false;
+    haptics.tap();
+    return runAction(
+      'police_rise',
+      async () => policeRiseRequest(roomId),
+      'gavel',
+    );
+  }, [roomId, runAction]);
+
   const advance = useCallback(async () => {
     if (!roomId || !stateRef.current) return false;
     const phase = stateRef.current.round?.phase;
@@ -586,8 +620,13 @@ export function useRoomSession({ code, initialName = '', initialAvatar = '' }: S
     start,
     pick,
     guess,
+    babuRise,
+    askPolice,
+    policeRise,
     advance,
     react,
     updateAvatar,
   };
 }
+
+export type RoomSession = ReturnType<typeof useRoomSession>;

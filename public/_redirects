@@ -1,0 +1,2 @@
+# Netlify SPA fallback: direct deep links like /room/:code serve index.html
+/*    /index.html   200

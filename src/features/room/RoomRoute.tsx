@@ -25,6 +25,7 @@ export function RoomRoute() {
   const { t } = useTranslation();
   const pushToast = useToastStore((state) => state.push);
 
+  const session = useRoomSession({ code: code?.toUpperCase() ?? '' });
   const {
     status,
     state,
@@ -40,7 +41,7 @@ export function RoomRoute() {
     updateRounds,
     start,
     updateAvatar,
-  } = useRoomSession({ code: code?.toUpperCase() ?? '' });
+  } = session;
 
   const [leaveOpen, setLeaveOpen] = useState(false);
 
@@ -225,7 +226,7 @@ export function RoomRoute() {
                 }}
               />
             ) : (
-              <GameTable code={normalizedCode} />
+              <GameTable session={session} />
             )}
 
             <ConfirmDialog

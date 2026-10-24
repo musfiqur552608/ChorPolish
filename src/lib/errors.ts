@@ -20,12 +20,14 @@ const KNOWN_CODES = new Set([
   'PICKED_ALREADY',
   'SLOT_TAKEN',
   'ONLY_POLICE',
+  'ONLY_BABU',
   'INVALID_GUESS',
   'GUESS_LOCKED',
   'HOST_LEAVE_LOBBY',
   'ROOM_PAUSED',
   'GRACE_EXPIRED',
   'REACTION_THROTTLED',
+  'SERVER_OUTDATED',
   'NETWORK',
   'UNAUTHENTICATED',
   'UNKNOWN',
@@ -57,6 +59,9 @@ export function normalizeApiError(error: unknown): NormalizedError {
 
   if (/failed to fetch|networkerror|load failed|network request failed|fetch/i.test(rawMessage)) {
     return { code: 'NETWORK', rawMessage };
+  }
+  if (/could not find the function|schema cache|pgrst202/i.test(rawMessage)) {
+    return { code: 'SERVER_OUTDATED', rawMessage };
   }
   if (/jwt|session|auth/i.test(rawMessage)) {
     return { code: 'UNAUTHENTICATED', rawMessage };
