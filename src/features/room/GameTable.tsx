@@ -23,6 +23,7 @@ import { localizeNumber } from '@/lib/numbers';
 import { haptics } from '@/lib/haptics';
 import { sound } from '@/lib/sound';
 import { ScoreSheet } from '@/features/scoresheet/ScoreSheet';
+import { ExportScoreSheet } from '@/features/scoresheet/ExportScoreSheet';
 import type { RoomSession } from './useRoomSession';
 import type { Role } from '@/types';
 
@@ -863,6 +864,20 @@ export function GameTable({ session }: GameTableProps) {
           history={history}
           totalRounds={totalRounds}
           live={false}
+        />
+
+        <ExportScoreSheet
+          players={players.map((p) => ({
+            id: p.id,
+            name: p.name,
+            avatar: p.avatar,
+            isMe: p.id === me?.id,
+            isHost: p.isHost,
+            totalScore: p.totalScore,
+            babuCount: p.babuCount,
+          }))}
+          history={history}
+          totalRounds={totalRounds}
         />
 
         <div className="space-y-2">
