@@ -39,7 +39,7 @@ Output: `dist/` directory with static files.
 ```
 src/
 ├── features/
-│   ├── engine/          # Pure game engine (26/28 Vitest tests pass)
+│   ├── engine/          # Pure game engine (35/35 Vitest tests pass)
 │   ├── lobby/           # Lobby UI (LobbyView, RoomRoute, RoomPreviewView)
 │   ├── room/            # Game table (GameTable), session hook (useRoomSession)
 │   ├── scoresheet/      # ScoreSheet component
@@ -52,12 +52,42 @@ src/
 ```
 
 ### Migrations (Supabase PostgreSQL)
-Migration files are in `supabase/migrations/`:
-- `001_init.sql` — Schema, RLS policies, grants, realtime configuration
-- `002_game_rpcs.sql` — All 20+ security-definer RPCs (create_room, join_room, set_ready, set_rounds, start_game, pick_slip, police_guess, advance_phase, leave_room, heartbeat, sync_room, finalize_room, build_room_state, etc.)
-- `003_cleanup_migration.sql` — pg_cron cleanup jobs (abandoned room deletion, 120s cleanup window)
+Migration files are in `supabase/migrations/` and **must be applied in filename order**:
+- `20261023000100_init.sql` — Schema, RLS policies, grants, realtime configuration
+- `20261023000200_game_rpcs.sql` — All security-definer RPCs (create_room, join_room, set_ready, set_rounds, start_game, pick_slip, police_guess, advance_phase, leave_room, heartbeat, sync_room, finalize_room, build_room_state, cleanup_rooms, etc.)
+- `20261024000400_manual_flow.sql` — Manual Babu rise → ask Police → Police rise → guess flow, new phase timestamps, `rooms.state_version`
+- `20261024000500_scheduled_cleanup.sql` — Schedules `public.cleanup_rooms()` via pg_cron (safe replacement for the former 003 draft)
 
-Run migrations with `psql` or the Supabase CLI. The SQL targets local PostgreSQL 17; for Supabase, use the dashboard or `supabase migration` CLI.
+The old `003_cleanup_migration.sql` draft was **removed**: it redefined `finalize_room`/`leave_room`, granted internal functions to `public`, and deleted child rows directly. If that draft was ever applied to a database, re-run `20261023000200_game_rpcs.sql` once afterwards — it is idempotent and restores the audited function bodies.
+
+#### Applying to hosted Supabase (SQL editor)
+1. Open **Dashboard → SQL Editor** for the project.
+2. Paste and run each migration file in order (001 → 002 → 004 → 005).
+3. Enable pg_cron once: **Database → Extensions → pg_cron → Enable**.
+4. If pg_cron was enabled *after* running 005, schedule the job manually:
+   ```sql
+   select cron.schedule(
+     'chor-police-cleanup-rooms',
+     '* * * * *',
+     'select public.cleanup_rooms();'
+   );
+   ```
+5. Verify:
+   ```sql
+   select extname from pg_extension where extname = 'pg_cron';
+   select jobid, jobname, schedule, command, active
+     from cron.job where jobname = 'chor-police-cleanup-rooms';
+   select public.cleanup_rooms();  -- manual run; deletes idle/expired rooms
+   ```
+6. Verify the manual flow is live:
+   ```sql
+   select column_name from information_schema.columns
+    where table_schema = 'public' and table_name = 'rounds'
+      and column_name in ('babu_risen_at', 'police_called_at', 'police_risen_at');
+   ```
+   Three rows must be returned. Until 004 is applied, the client automatically falls back to the legacy automatic reveal phases.
+
+`cleanup_rooms()` deletes rooms idle for 30 minutes or past `cleanup_at` (abandoned rooms get a 120-second download window), and prunes reactions older than one day. It is revoked from `anon`/`authenticated` and only runs from the cron job.
 
 ### Vitest Tests
 Run with `npm run test`. Tests cover:
@@ -74,7 +104,7 @@ Run with `npm run test`. Tests cover:
 - `totalScoresByPlayer`: single/multi-round accumulation
 - `ALLOWED_TRANSITIONS`: all transition definitions
 
-26 of 28 tests pass (2 modified for test/setup realities, not code bugs).
+35 of 35 tests pass.
 
 ### Environment Variables
 Create `.env` (or verify existing):
@@ -161,18 +191,15 @@ VITE_ENABLE_DEMO=true   # Show bot demo on landing even without Supabase
 - Reduced motion support
 - Accessible How to Play modal
 - ScoreSheet (live, compact, captureMode)
-- PNG/PDF export foundation
-- Web Share API fallback
-- 26/28 Vitest engine tests passing
-- 3 SQL migrations (001, 002, 003)
+- PNG/PDF scorecard export + Web Share API
+- 35/35 Vitest engine tests passing
+- 4 SQL migrations (001 → 002 → 004 → 005)
 - GitHub repository with full history
 
 ### 🔧 To Do (Low Priority)
-- Fix 2 Vitest test expectations (scoreRound `caught` depends on round state)
-- Create full README/deploy docs
-- Enhance PNG/PDF export in ScoreSheet
-- Set up Vitest wrappers for SQL migration tests
+- Apply migrations 004/005 to the hosted Supabase project (manual flow is behind this)
 - Verify realtime integration with your Supabase project (may require Realtime enablement + RLS policy verification)
+- Set up Vitest wrappers for SQL migration tests
 
 ---
 
