@@ -24,7 +24,7 @@ npm.cmd run verify
 | Profile storage | `src/lib/profileDraft.test.ts` | Draft round-trip/truncation, malformed JSON, blocked storage |
 | Request IDs | `src/lib/requestId.test.ts` | UUID v4 shape, uniqueness, no-Web-Crypto fallback |
 | Translations | `src/i18n/locales.test.ts` | Identical key sets and interpolation placeholders in English and Bengali; no blank strings |
-| Migrations | `src/testing/migrations.test.ts` | Secret-table RLS/grants/publication, cascade deletes, leave hard-delete, cleanup rules, own-role gating, manual-flow phases, safe pg_cron schedule, no unsafe 003 draft, SQL point table matches the client |
+| Migrations | `src/testing/migrations.test.ts` | Secret-table RLS/grants/publication, cascade deletes, leave hard-delete, cleanup rules, own-role gating, manual-flow phases, safe pg_cron schedule, end-of-room deletion (120s/5m/10m/30m), no unsafe 003 draft, SQL point table matches the client |
 | Privacy | `src/testing/privacy.test.ts` | The exported/in-game score sheets never receive the room code |
 
 The migration suite is static: it reads the SQL files, so it needs no database.
@@ -33,7 +33,7 @@ It is a guardrail, not a substitute for applying migrations to a real project.
 ## Manual four-player end-to-end pass
 
 Use four browser profiles or one normal window plus three incognito windows.
-Apply migrations `004` and `005` first (see README).
+Apply migrations `004`, `005`, and `006` first (see README).
 
 1. **Lobby**
    - Host creates a room; code is six readable characters.
@@ -67,6 +67,8 @@ Apply migrations `004` and `005` first (see README).
    - In-game leave: room is erased for everyone; other screens show “Room closed”.
    - Disconnect one player: pause overlay + 90-second grace; reconnect resumes and deadlines shift.
    - Let the grace expire: match ends as abandoned, partial scores are shown, a 120-second cleanup warning appears, and the room disappears after cron cleanup.
+   - Finish a match normally: the final screen shows the same 120-second cleanup warning; after the window and one cron tick, the room and every child row are gone.
+   - Explicit leave (lobby host or in-game player) erases the room immediately; other screens show “Room closed”.
 7. **Language & accessibility**
    - Toggle Bengali/English; every visible string changes and layout stays intact.
    - Reduced motion disables animations.
@@ -75,7 +77,7 @@ Apply migrations `004` and `005` first (see README).
 
 ## SQL verification queries
 
-Apply `001 → 002 → 004 → 005`, enable pg_cron, then run:
+Apply `001 → 002 → 004 → 005 → 006`, enable pg_cron, then run:
 
 ```sql
 select extname from pg_extension where extname = 'pg_cron';
@@ -98,11 +100,21 @@ select table_name, privilege_type
    and table_name in ('rounds', 'round_roles');
 
 select public.cleanup_rooms();  -- manual cleanup; safe to run
+
+-- Replace CODE; after the 120s window + one cron tick this must return 0.
+select count(*) from public.rooms where code = 'CODE';
+
+-- Every room-owned FK must cascade (confdeltype = 'c').
+select conrelid::regclass as table_name, confdeltype
+  from pg_constraint
+ where confrelid = 'public.rooms'::regclass
+   and contype = 'f';
 ```
 
 ## Environment notes
 
-- `004` (manual flow) and `005` (scheduled cleanup) must be applied to the
-  hosted project; the client falls back to the automatic reveal phases until 004.
+- `004` (manual flow), `005` (scheduled cleanup), and `006` (end-of-room
+  deletion) must be applied to the hosted project; the client falls back to the
+  automatic reveal phases until 004.
 - Enable anonymous sign-ins and pg_cron in the Supabase dashboard.
 - The SQL tests are static; `psql`/Docker are not required.

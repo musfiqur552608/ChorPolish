@@ -19,6 +19,7 @@ const INIT = '20261023000100_init.sql';
 const RPCS = '20261023000200_game_rpcs.sql';
 const MANUAL = '20261024000400_manual_flow.sql';
 const CLEANUP = '20261024000500_scheduled_cleanup.sql';
+const END = '20261024000600_end_of_room_cleanup.sql';
 
 describe('migration set', () => {
   it('ships every required migration in order and no unsafe 003 draft', () => {
@@ -26,12 +27,13 @@ describe('migration set', () => {
       .filter((file) => file.endsWith('.sql'))
       .sort();
 
-    for (const file of [INIT, RPCS, MANUAL, CLEANUP]) {
+    for (const file of [INIT, RPCS, MANUAL, CLEANUP, END]) {
       expect(files).toContain(file);
     }
     expect(files.indexOf(INIT)).toBeLessThan(files.indexOf(RPCS));
     expect(files.indexOf(RPCS)).toBeLessThan(files.indexOf(MANUAL));
     expect(files.indexOf(MANUAL)).toBeLessThan(files.indexOf(CLEANUP));
+    expect(files.indexOf(CLEANUP)).toBeLessThan(files.indexOf(END));
     expect(existsSync(resolve(MIGRATIONS_DIR, '20261023000300_cleanup_migration.sql'))).toBe(false);
   });
 });
@@ -64,6 +66,9 @@ describe('secret tables (001)', () => {
 
   it('cascades room deletion to every child table', () => {
     expect(init).toContain('room_id uuid not null references public.rooms (id) on delete cascade');
+    // players, rounds, round_roles, round_results, reactions
+    const cascades = init.match(/references public\.rooms \(id\) on delete cascade/g) ?? [];
+    expect(cascades.length).toBeGreaterThanOrEqual(5);
   });
 
   it('uses zero-based slots, matching GAME_CONFIG.slots', () => {
@@ -153,6 +158,41 @@ describe('scheduled cleanup (005)', () => {
   it('never grants internal functions to public', () => {
     expect(cleanupCode).not.toMatch(/grant execute[\s\S]*?\bto public\b/i);
     expect(cleanupCode).toMatch(
+      /revoke all on function public\.cleanup_rooms\(\) from public, anon, authenticated;/i,
+    );
+  });
+});
+
+describe('end-of-room deletion (006)', () => {
+  const end = read(END);
+  const endCode = withoutComments(end);
+
+  it('starts the deletion window for every finalized room, not only abandoned ones', () => {
+    expect(endCode).toContain("cleanup_at = now() + interval '120 seconds'");
+    expect(endCode).not.toContain("p_reason = 'abandoned'");
+  });
+
+  it('deletes at cleanup_at, after finished_at, and for stuck final results', () => {
+    expect(endCode).toMatch(/cleanup_at\s*<=\s*now\(\)/);
+    expect(endCode).toMatch(/room\.status = 'finished'/);
+    expect(endCode).toContain("finished_at < now() - interval '5 minutes'");
+    expect(endCode).toContain("interval '10 minutes'");
+    expect(endCode).toContain('r.round_number = room.total_rounds');
+    expect(endCode).toContain('public.rounds r');
+  });
+
+  it('matches the client cleanup constants', () => {
+    expect(endCode).toContain(`interval '${GAME_CONFIG.roomCleanupSeconds} seconds'`);
+    expect(endCode).toContain(`interval '${GAME_CONFIG.finishedRoomDeleteMinutes} minutes'`);
+    expect(endCode).toContain(`interval '${GAME_CONFIG.stuckFinalResultMinutes} minutes'`);
+    expect(endCode).toContain(`interval '${GAME_CONFIG.inactiveRoomMinutes} minutes'`);
+  });
+
+  it('keeps finalize_room and cleanup_rooms server-only', () => {
+    expect(endCode).toMatch(
+      /revoke all on function public\.finalize_room\(uuid, text\) from public, anon, authenticated;/i,
+    );
+    expect(endCode).toMatch(
       /revoke all on function public\.cleanup_rooms\(\) from public, anon, authenticated;/i,
     );
   });

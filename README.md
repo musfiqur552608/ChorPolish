@@ -39,7 +39,7 @@ Output: `dist/` directory with static files.
 ```
 src/
 ├── features/
-│   ├── engine/          # Pure game engine (138/138 Vitest tests pass)
+│   ├── engine/          # Pure game engine (142/142 Vitest tests pass)
 │   ├── lobby/           # Lobby UI (LobbyView, RoomRoute, RoomPreviewView)
 │   ├── room/            # Game table (GameTable), session hook (useRoomSession)
 │   ├── scoresheet/      # ScoreSheet component
@@ -57,12 +57,13 @@ Migration files are in `supabase/migrations/` and **must be applied in filename 
 - `20261023000200_game_rpcs.sql` — All security-definer RPCs (create_room, join_room, set_ready, set_rounds, start_game, pick_slip, police_guess, advance_phase, leave_room, heartbeat, sync_room, finalize_room, build_room_state, cleanup_rooms, etc.)
 - `20261024000400_manual_flow.sql` — Manual Babu rise → ask Police → Police rise → guess flow, new phase timestamps, `rooms.state_version`
 - `20261024000500_scheduled_cleanup.sql` — Schedules `public.cleanup_rooms()` via pg_cron (safe replacement for the former 003 draft)
+- `20261024000600_end_of_room_cleanup.sql` — Deterministic deletion for every ended room: 120s cleanup window on finalize, 5-minute finished fallback, 10-minute stuck-final fallback, 30-minute idle cleanup
 
 The old `003_cleanup_migration.sql` draft was **removed**: it redefined `finalize_room`/`leave_room`, granted internal functions to `public`, and deleted child rows directly. If that draft was ever applied to a database, re-run `20261023000200_game_rpcs.sql` once afterwards — it is idempotent and restores the audited function bodies.
 
 #### Applying to hosted Supabase (SQL editor)
 1. Open **Dashboard → SQL Editor** for the project.
-2. Paste and run each migration file in order (001 → 002 → 004 → 005).
+2. Paste and run each migration file in order (001 → 002 → 004 → 005 → 006).
 3. Enable pg_cron once: **Database → Extensions → pg_cron → Enable**.
 4. If pg_cron was enabled *after* running 005, schedule the job manually:
    ```sql
@@ -77,7 +78,9 @@ The old `003_cleanup_migration.sql` draft was **removed**: it redefined `finaliz
    select extname from pg_extension where extname = 'pg_cron';
    select jobid, jobname, schedule, command, active
      from cron.job where jobname = 'chor-police-cleanup-rooms';
-   select public.cleanup_rooms();  -- manual run; deletes idle/expired rooms
+   select public.cleanup_rooms();  -- manual run; deletes ended/idle rooms
+   -- Replace CODE; after cleanup this must return 0.
+   select count(*) from public.rooms where code = 'CODE';
    ```
 6. Verify the manual flow is live:
    ```sql
@@ -87,11 +90,11 @@ The old `003_cleanup_migration.sql` draft was **removed**: it redefined `finaliz
    ```
    Three rows must be returned. Until 004 is applied, the client automatically falls back to the legacy automatic reveal phases.
 
-`cleanup_rooms()` deletes rooms idle for 30 minutes or past `cleanup_at` (abandoned rooms get a 120-second download window), and prunes reactions older than one day. It is revoked from `anon`/`authenticated` and only runs from the cron job.
+`finalize_room()` gives **every** ended room (completed or abandoned) `cleanup_at = now() + 120s`, which is enough time to export the notebook. `cleanup_rooms()` then deletes rooms past `cleanup_at` regardless of client polling, finished rooms older than 5 minutes, rooms whose final round sat on `ROUND_RESULT`/`MATCH_END` for 10 minutes, and rooms idle for 30 minutes. Deleting `public.rooms` cascades to `players`, `rounds`, `round_roles`, `round_results`, and `reactions`. The function is revoked from `anon`/`authenticated` and only runs from the cron job. Explicit `leave_room()` still hard-deletes immediately.
 
 ### Automated Tests
 Run `npm.cmd run test`, or `npm.cmd run verify` for typecheck + tests + build.
-138 tests across 14 files cover:
+142 tests across 14 files cover:
 - Engine: target parity, draw order, shuffler rotation, scoring (Chor/Dakat), competition ranking, Babu tie-break, shared ranks, transitions, visibility, history dedupe
 - Config: zero-based slot contract, four seats, points, timers, avatars
 - Room codes: sanitising and validation against the database alphabet
@@ -102,7 +105,7 @@ Run `npm.cmd run test`, or `npm.cmd run verify` for typecheck + tests + build.
 - i18n: identical English/Bengali keys and interpolation placeholders
 - Migrations/privacy: RLS/grants/publication secrecy, cascade deletes, leave hard-delete, cleanup, own-role gating, manual flow, safe pg_cron schedule, room code excluded from scorecards
 
-138 of 138 tests pass. See [`TESTING.md`](TESTING.md) for the manual four-player checklist and SQL verification queries.
+142 of 142 tests pass. See [`TESTING.md`](TESTING.md) for the manual four-player checklist and SQL verification queries.
 
 ### Environment Variables
 Create `.env` (or verify existing):
@@ -167,13 +170,14 @@ VITE_SUPABASE_ANON_KEY=sb_publishable_YOUR_KEY
 - 90s grace period from `disconnectedAt`
 - If player returns within 90s: `sync_room` marks them online, clears `pausedAt`, and shifts deadlines by the pause duration
 - If grace expires: `finalize_room('abandoned')` keeps scores from completed rounds, computes `final_rank`, and sets `cleanupAt = now() + 120s`
-- Abandoned room has a 120-second download window before automatic deletion
-- ScoreSheet downloadable even after abandonment; the UI shows a partial-results banner and cleanup warning
+- Every finalized room (completed or abandoned) gets the same 120-second download window
+- `cleanup_rooms()` deletes at `cleanupAt` even while clients keep polling; finished rooms fall back to 5 minutes, stuck final results to 10 minutes, and idle rooms to 30 minutes
+- The result screen shows the cleanup countdown; explicit leave deletes immediately; deleting the room cascades to all child rows
 
 ### TypeScript & Build
 - `npm.cmd run typecheck` — clean
 - `npm.cmd run build` — `✓ built`
-- `npm.cmd run verify` — typecheck + 138 tests + production build
+- `npm.cmd run verify` — typecheck + 142 tests + production build
 
 ---
 
@@ -181,22 +185,23 @@ VITE_SUPABASE_ANON_KEY=sb_publishable_YOUR_KEY
 
 ### ✅ Complete Features
 - Lobby UI + game table for all 10 phases (manual flow + legacy `BABU_ORDER`)
-- Pause/reconnect with 90s grace; abandoned matches keep partial scores and a 120s download window
-- MATCH_END with competition ranking, shared ranks, Babu tie-break, partial/abandoned states
+- Pause/reconnect with 90s grace; all ended matches get a deterministic 120s deletion window, and abandoned matches keep partial scores
+- MATCH_END with competition ranking, shared ranks, Babu tie-break, partial/abandoned states, and a cleanup countdown
 - Bengali default + English toggle (key/interpolation parity enforced by tests)
 - Sound/haptics for all actions
 - Reduced motion support
 - Accessible How to Play modal and focus-trapped dialogs
 - ScoreSheet (live, compact, captureMode) with private own-slip reveal
 - PNG/PDF scorecard export + Web Share API (room code excluded)
-- 138/138 automated tests (unit, static migration/security invariants)
-- 4 SQL migrations (001 → 002 → 004 → 005)
+- 142/142 automated tests (unit, static migration/security invariants)
+- 5 SQL migrations (001 → 002 → 004 → 005 → 006)
+- Guaranteed end-of-room data deletion (cleanup_at + cron fallbacks + FK cascades)
 - GitHub repository with full history
 
 ### 🔧 To Do (Low Priority)
-- Apply migrations 004/005 to the hosted Supabase project (manual flow is behind this)
+- Apply migrations 004/005/006 to the hosted Supabase project (manual flow + deletion guarantee are behind this)
 - Enable anonymous sign-ins and pg_cron in the Supabase dashboard
-- Verify realtime integration against the hosted project after 004/005
+- Verify realtime integration against the hosted project after 004/005/006
 - See [`TESTING.md`](TESTING.md) for the manual four-player regression checklist
 
 ---

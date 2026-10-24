@@ -35,8 +35,12 @@ export const GAME_CONFIG = {
   guessSeconds: 30,
   /** How long a disconnected player's seat is held mid-game. */
   graceSeconds: 90,
-  /** Download window before an abandoned room is erased. */
-  abandonedCleanupSeconds: 120,
+  /** Download window before any ended room is erased by cleanup_rooms(). */
+  roomCleanupSeconds: 120,
+  /** Fallback: finished rooms older than this are erased even without cleanup_at. */
+  finishedRoomDeleteMinutes: 5,
+  /** Fallback: a final round stuck on ROUND_RESULT is erased after this long. */
+  stuckFinalResultMinutes: 10,
   /** Safety net: any room untouched for this long is deleted by cron. */
   inactiveRoomMinutes: 30,
 

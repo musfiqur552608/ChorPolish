@@ -932,6 +932,14 @@ export function GameTable({ session }: GameTableProps) {
           </div>
         )}
 
+        {!abandoned && cleanupSeconds !== null && (
+          <p className="rounded-lg border border-terracotta/20 bg-terracotta/[0.04] px-3 py-2 text-center text-[12px] font-medium leading-snug text-terracotta">
+            {cleanupSeconds > 0
+              ? t('result.cleanupWarning', { seconds: cleanupSeconds })
+              : t('result.cleanupSoon')}
+          </p>
+        )}
+
         {noRounds ? (
           <div className="rounded-[12px] border-2 border-ink/15 bg-paper-light p-6 text-center shadow-sm">
             <h2 className="font-display text-2xl font-bold text-ink">{t('result.noResultTitle')}</h2>

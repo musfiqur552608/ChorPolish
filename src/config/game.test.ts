@@ -32,7 +32,9 @@ describe('game config', () => {
     }
     expect(GAME_CONFIG.drawSeconds).toBeGreaterThan(0);
     expect(GAME_CONFIG.graceSeconds).toBeGreaterThan(0);
-    expect(GAME_CONFIG.abandonedCleanupSeconds).toBeGreaterThan(0);
+    expect(GAME_CONFIG.roomCleanupSeconds).toBeGreaterThan(0);
+    expect(GAME_CONFIG.finishedRoomDeleteMinutes).toBeGreaterThan(0);
+    expect(GAME_CONFIG.stuckFinalResultMinutes).toBeGreaterThan(0);
     expect(GAME_CONFIG.inactiveRoomMinutes).toBeGreaterThan(0);
   });
 
