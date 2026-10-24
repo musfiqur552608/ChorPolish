@@ -191,6 +191,7 @@ VITE_ENABLE_DEMO=true   # Show bot demo on landing even without Supabase
 - Reduced motion support
 - Accessible How to Play modal
 - ScoreSheet (live, compact, captureMode)
+- Private own-slip reveal (only your own role/points after you pick)
 - PNG/PDF scorecard export + Web Share API
 - 35/35 Vitest engine tests passing
 - 4 SQL migrations (001 → 002 → 004 → 005)

@@ -6,6 +6,7 @@ import {
   Check,
   Clock,
   Crown,
+  Eye,
   Play,
   SkipForward,
   UserRound,
@@ -74,6 +75,9 @@ export function GameTable({ session }: GameTableProps) {
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [avatarDraft, setAvatarDraft] = useState(mePlayer?.avatar ?? GAME_CONFIG.avatars[0]);
+  // Private own-slip peek. Never fed from publicRoles — only from me.role.
+  const [slipOpen, setSlipOpen] = useState(false);
+  const [slipHidden, setSlipHidden] = useState(false);
 
   useEffect(() => {
     if (round?.phaseDeadline) {
@@ -82,6 +86,12 @@ export function GameTable({ session }: GameTableProps) {
       deadlineRef.current = 0;
     }
   }, [round?.phaseDeadline]);
+
+  // Every new round starts with a fresh, face-up private slip.
+  useEffect(() => {
+    setSlipHidden(false);
+    setSlipOpen(false);
+  }, [round?.id]);
 
   const secondsLeft = () => {
     const target = deadlineRef.current;
@@ -119,6 +129,14 @@ export function GameTable({ session }: GameTableProps) {
   const myRole = me?.role ?? null;
   const isBabu = myRole === 'BABU';
   const isPolice = myRole === 'POLICE';
+  // me.role is only populated by the server once this player has actually
+  // picked a slip (the shuffler receives the last slip automatically). It is
+  // never derived from publicRoles, so this can only ever show your own role.
+  const canViewOwnSlip = Boolean(
+    myRole &&
+    round &&
+    !['FINAL_REVEAL', 'ROUND_RESULT', 'MATCH_END'].includes(round.phase),
+  );
   const babuRisen = Boolean(round?.babuRisenAt);
   const policeCalled = Boolean(round?.policeCalledAt);
   const policeRisen = Boolean(round?.policeRisenAt);
@@ -292,6 +310,43 @@ export function GameTable({ session }: GameTableProps) {
     </header>
   );
 
+  // ── Private own slip ────────────────────────────────────────────────────────
+  // Fed exclusively by me.role. Other players' slips stay face-down on this
+  // screen until the server reveals them at the proper phase.
+  const renderMySlipCard = () => {
+    if (!myRole) return null;
+    return (
+      <div className="paper mx-auto flex w-full max-w-sm flex-col items-center gap-2 rounded-[12px] border border-mustard/40 bg-mustard/[0.06] p-5 text-center shadow-sm">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-faint">
+          {t('game.yourSlip')}
+        </p>
+        <RoleSlip
+          role={slipHidden ? null : myRole}
+          faceDown={slipHidden}
+          size="lg"
+          animateIn
+          interactive
+          onClick={() => {
+            playClick();
+            setSlipHidden((hidden) => !hidden);
+          }}
+          ariaLabel={slipHidden ? t('game.peek') : t('game.hide')}
+        />
+        <p className="text-[11px] leading-snug text-ink-soft">{t('game.keepSecret')}</p>
+        <button
+          type="button"
+          onClick={() => {
+            playClick();
+            setSlipHidden((hidden) => !hidden);
+          }}
+          className="text-[12px] font-semibold text-terracotta underline-offset-2 hover:underline"
+        >
+          {slipHidden ? t('game.peek') : t('game.hide')}
+        </button>
+      </div>
+    );
+  };
+
   const renderSlipGrid = () => (
     <div className="grid grid-cols-4 gap-2 sm:gap-3">
       {[1, 2, 3, 4].map((slot) => {
@@ -315,7 +370,7 @@ export function GameTable({ session }: GameTableProps) {
           >
             <RoleSlip
               size="md"
-              faceDown={!taken}
+              faceDown
               interactive={Boolean(isMyTurnToPick && available)}
               onClick={() => void handlePick(slot)}
               showBrand={false}
@@ -949,30 +1004,37 @@ export function GameTable({ session }: GameTableProps) {
             <p className="text-sm text-ink-soft">{t('game.shuffling')}</p>
           </div>
         )}
-        {round?.phase === 'DRAW' && renderSlipGrid()}
+        {round?.phase === 'DRAW' && (
+          <div className="space-y-5">
+            {renderSlipGrid()}
+            {renderMySlipCard()}
+          </div>
+        )}
       </div>
     );
   } else if (round?.phase === 'HIDDEN_ROLES') {
     bodyContent = (
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center min-h-[300px]">
-        <div className="grid grid-cols-4 gap-2">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center min-h-[300px] gap-5">
+        {renderMySlipCard()}
+        <div className="grid grid-cols-4 gap-2 opacity-60" aria-hidden>
           {[1, 2, 3, 4].map((slot) => (
-            <RoleSlip key={slot} size="md" faceDown animateIn className="animate-soft-pulse" />
+            <RoleSlip key={slot} size="sm" faceDown animateIn />
           ))}
         </div>
-        <p className="mt-6 text-sm text-ink-soft">{t('game.drawWaiting')}</p>
       </div>
     );
   } else if (round?.phase === 'BABU_REVEAL') {
     bodyContent = manualFlowSupported ? (
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 space-y-4">
         {renderBabuReveal()}
+        {!isBabu && renderMySlipCard()}
       </div>
     ) : renderLegacyReveal();
   } else if (round?.phase === 'POLICE_REVEAL') {
     bodyContent = manualFlowSupported ? (
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 space-y-4">
         {renderPoliceReveal()}
+        {!isPolice && renderMySlipCard()}
       </div>
     ) : renderLegacyReveal();
   } else if (round?.phase === 'BABU_ORDER') {
@@ -1007,6 +1069,20 @@ export function GameTable({ session }: GameTableProps) {
             {t('common.leave')}
           </button>
           <div className="flex items-center gap-2 text-right">
+            {canViewOwnSlip && (
+              <button
+                type="button"
+                onClick={() => {
+                  playClick();
+                  setSlipOpen(true);
+                }}
+                aria-label={t('game.yourSlip')}
+                className="inline-flex items-center gap-1 rounded-full border border-ink/10 bg-paper-light px-2 py-0.5 text-[10px] font-bold text-ink-soft transition-colors hover:border-ink/30 hover:text-ink"
+              >
+                <Eye className="h-3.5 w-3.5" aria-hidden />
+                <span className="hidden sm:inline">{t('game.yourSlip')}</span>
+              </button>
+            )}
             <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold', connected ? 'bg-leaf/[0.1] text-leaf' : 'bg-terracotta/[0.1] text-terracotta')}>
               <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden />
               {connected ? t('common.online') : t('common.offline')}
@@ -1098,6 +1174,23 @@ export function GameTable({ session }: GameTableProps) {
               {t('game.guessConfirm')}
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* Private own-slip peek — only ever renders me.role */}
+      <Modal
+        open={slipOpen}
+        onClose={() => setSlipOpen(false)}
+        title={t('game.yourSlip')}
+        description={t('game.keepSecret')}
+        size="sm"
+        closeLabel={t('common.close')}
+      >
+        <div className="flex flex-col items-center gap-3 py-2 text-center">
+          {myRole && <RoleSlip role={myRole} size="hero" animateIn />}
+          <p className="font-display text-lg font-bold text-ink">
+            {myRole ? t('game.myRole', { role: t(`roles.${myRole}.name`) }) : ''}
+          </p>
         </div>
       </Modal>
 

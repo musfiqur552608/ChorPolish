@@ -223,9 +223,12 @@ describe('nextRoundDestination', () => {
 });
 
 describe('isRoleVisibleTo', () => {
-  it('always lets a player see their own role', () => {
-    expect(isRoleVisibleTo('BABU', 'p1', 'p1', 'SHUFFLE')).toBe(true);
-    expect(isRoleVisibleTo('POLICE', 'p2', 'p2', 'SHUFFLE')).toBe(true);
+  it('lets a player see their own role only after picking', () => {
+    expect(isRoleVisibleTo('BABU', 'p1', 'p1', 'DRAW')).toBe(true);
+    expect(isRoleVisibleTo('POLICE', 'p2', 'p2', 'HIDDEN_ROLES')).toBe(true);
+    expect(isRoleVisibleTo('CHOR', 'p3', 'p3', 'POLICE_GUESS')).toBe(true);
+    expect(isRoleVisibleTo('BABU', 'p1', 'p1', 'SHUFFLE')).toBe(false);
+    expect(isRoleVisibleTo('BABU', 'p1', 'p1', 'DRAW', false)).toBe(false);
   });
   it('never leaks hidden roles before FINAL_REVEAL', () => {
     expect(isRoleVisibleTo('CHOR', 'p3', 'p1', 'SHUFFLE')).toBe(false);

@@ -236,6 +236,8 @@ export function nextRoundDestination(currentRound: number, totalRounds: number):
 
 /**
  * Which secrets may a specific viewer see? The server mirrors this policy.
+ * A player's own role is only delivered after they pick a slip (the shuffler
+ * receives the last slip automatically), hence `viewerHasPicked`.
  * Babu becomes public at BABU_REVEAL, Police at POLICE_REVEAL, and the hidden
  * pair only at FINAL_REVEAL.
  */
@@ -244,8 +246,9 @@ export function isRoleVisibleTo(
   playerId: string,
   viewerPlayerId: string,
   phase: Phase,
+  viewerHasPicked = true,
 ): boolean {
-  if (playerId === viewerPlayerId) return true;
+  if (playerId === viewerPlayerId) return viewerHasPicked && phase !== 'SHUFFLE';
   if (phase === 'FINAL_REVEAL' || phase === 'ROUND_RESULT' || phase === 'MATCH_END') return true;
   if (role === 'BABU') return phase !== 'SHUFFLE' && phase !== 'DRAW' && phase !== 'HIDDEN_ROLES';
   if (role === 'POLICE') {

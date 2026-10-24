@@ -75,6 +75,10 @@ begin
   v_has_round := found;
 
   if v_has_round then
+    -- round_roles starts with player_id = null for every slip; assign_slip()
+    -- fills it only when that player picks (the shuffler receives the last
+    -- slip automatically). This therefore exposes the caller's own role only
+    -- after their own pick, and never anybody else's.
     select rr.role into v_my_role
     from public.round_roles rr
     where rr.round_id = v_round.id and rr.player_id = v_me.id;
