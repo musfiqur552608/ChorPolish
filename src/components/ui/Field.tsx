@@ -37,7 +37,7 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(function Field(
           aria-invalid={Boolean(error) || undefined}
           aria-describedby={describedBy}
           className={cn(
-            'h-12 w-full rounded-[10px] border-2 border-ink/15 bg-paper-light px-4 text-ink placeholder:text-ink-faint/70',
+            'h-12 w-full rounded-[10px] border-2 border-ink/15 bg-paper-light px-4 text-ink placeholder:text-ink-faint',
             'shadow-[inset_0_2px_4px_rgba(32,51,70,.04)] transition-colors',
             'focus:border-teal focus:outline-none focus:ring-4 focus:ring-teal/10',
             leading && 'pl-10',

@@ -59,7 +59,7 @@ export function LoadingScreen({ title, subtitle, fullScreen = true, dark = false
         </div>
         <h2 className={cn('font-display text-xl font-bold', dark ? 'text-paper-light' : 'text-ink')}>{title}</h2>
         {subtitle && (
-          <p className={cn('mt-1.5 max-w-xs text-sm', dark ? 'text-paper/65' : 'text-ink-soft')}>{subtitle}</p>
+          <p className={cn('mt-1.5 max-w-xs text-sm', dark ? 'text-paper/85' : 'text-ink-soft')}>{subtitle}</p>
         )}
       </div>
     </div>

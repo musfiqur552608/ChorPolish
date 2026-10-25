@@ -93,6 +93,7 @@ export function LandingPage() {
     const validationError = validate();
     if (validationError) {
       setError(validationError);
+      sound.play('oops');
       haptics.error();
       return;
     }
@@ -120,6 +121,7 @@ export function LandingPage() {
     } catch (cause) {
       setError(userErrorMessage(cause, t));
       pushToast(userErrorMessage(cause, t), 'error');
+      sound.play('oops');
       haptics.error();
     } finally {
       setLoading(false);
@@ -137,9 +139,9 @@ export function LandingPage() {
         }}
       />
 
-      <header className="relative z-20 mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 pt-safe sm:px-7 sm:py-6">
+      <header className="relative z-20 mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-5 pt-safe sm:px-7 sm:py-6">
         <Logo />
-        <div className="flex items-center gap-1.5">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
           <button
             type="button"
             onClick={() => {
@@ -262,7 +264,7 @@ export function LandingPage() {
               <div className="rounded-[7px] border border-ink/5 px-4 pb-5 pt-4 sm:px-5">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="font-hand text-sm font-semibold uppercase tracking-[0.15em] text-terracotta/80">
+                    <p className="font-hand text-sm font-semibold uppercase tracking-[0.15em] text-terracotta">
                       {tab === 'create' ? t('landing.createTitle') : t('landing.joinTitle')}
                     </p>
                     <h2 className="mt-0.5 font-display text-xl font-bold leading-snug text-ink">
@@ -375,7 +377,7 @@ export function LandingPage() {
                           <div className="mb-2 flex items-center justify-between gap-2">
                             <span className="text-sm font-semibold text-ink">{t('landing.roundsLabel')}</span>
                             {roundsValid && rounds % GAME_CONFIG.recommendedMultiple !== 0 && (
-                              <span className="text-right font-hand text-[13px] leading-tight text-terracotta/80">
+                              <span className="text-right font-hand text-[13px] leading-tight text-terracotta">
                                 {t('landing.roundsWarning')}
                               </span>
                             )}
@@ -401,7 +403,7 @@ export function LandingPage() {
                                   )}
                                 >
                                   {localizeNumber(preset, i18n.language)}
-                                  <span className="text-[10px] font-normal opacity-65">
+                                  <span className="text-[10px] font-normal text-ink-soft">
                                     {i18n.language === 'bn' ? 'র' : 'R'}
                                   </span>
                                 </button>
@@ -493,7 +495,7 @@ export function LandingPage() {
                       <LockKeyhole className="h-3 w-3" aria-hidden />
                       {t('landing.privacy')}
                     </span>
-                    <span className="font-hand text-sm text-terracotta/70">৪ / ৪</span>
+                    <span className="shrink-0 whitespace-nowrap font-hand text-sm text-terracotta">৪ / ৪</span>
                   </div>
                 </form>
               </div>
@@ -507,7 +509,7 @@ export function LandingPage() {
 
         <div className="relative border-y border-ink/10 bg-paper-light/45">
           <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 sm:px-7 sm:py-16 lg:grid-cols-[.8fr_1.2fr] lg:items-center lg:gap-14">
-            <div className="relative">
+            <div className="relative min-w-0">
               <div className="flex items-end justify-between gap-4">
                 <div>
                   <p className="font-hand text-xl font-bold text-terracotta">Chapter one</p>
@@ -549,7 +551,7 @@ export function LandingPage() {
               </button>
             </div>
 
-            <div className="relative">
+            <div className="relative min-w-0">
               <div className="absolute -left-3 -top-5 z-10 rotate-[-4deg] rounded-sm border border-ink/10 bg-mustard/80 px-2.5 py-1 font-hand text-sm font-bold text-ink shadow-sm sm:-left-5">
                 {i18n.language === 'bn' ? 'নমুনা খাতা ✎' : 'A sample sheet ✎'}
               </div>
@@ -610,7 +612,7 @@ export function LandingPage() {
               <article
                 key={title}
                 className={cn(
-                  'paper relative rounded-[6px] border border-ink/10 p-5',
+                  'paper card-lift relative rounded-[6px] border border-ink/10 p-5 hover:shadow-paper-lift',
                   tint,
                 )}
                 style={{ transform: `rotate(${index === 1 ? 0.6 : index === 2 ? -0.4 : 0.2}deg)` }}

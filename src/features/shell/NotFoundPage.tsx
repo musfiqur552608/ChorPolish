@@ -17,7 +17,7 @@ export function NotFoundPage() {
       <div className="paper relative w-full max-w-lg rounded-sm p-7 text-center sm:p-10">
         <div className="tape -top-3 left-10 rotate-[-5deg]" aria-hidden />
         <Logo className="justify-center" />
-        <p className="mt-8 font-hand text-7xl font-bold leading-none text-terracotta/70">৪০৪</p>
+        <p className="mt-8 font-hand text-7xl font-bold leading-none text-terracotta">৪০৪</p>
         <h1 className="mt-2 font-display text-2xl font-bold text-ink">{t('notFound.title')}</h1>
         <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-ink-soft">{t('notFound.body')}</p>
         <Link

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
@@ -64,6 +64,8 @@ export function LobbyView({
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [avatarDraft, setAvatarDraft] = useState(me.avatar);
   const [leaveOpen, setLeaveOpen] = useState(false);
+  const [copied, setCopied] = useState<'code' | 'link' | null>(null);
+  const previousPlayerIds = useRef<string[]>([]);
 
   const code = state.room.code;
   const url = roomUrl(code);
@@ -77,6 +79,22 @@ export function LobbyView({
   useEffect(() => {
     setAvatarDraft(me.avatar);
   }, [me.avatar]);
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(null), 1600);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+
+  // Audible lobby arrivals/departures, without replaying on every poll.
+  useEffect(() => {
+    const ids = state.players.map((player) => player.id);
+    const previous = previousPlayerIds.current;
+    if (previous.length > 0 && ids.length !== previous.length) {
+      sound.play(ids.length > previous.length ? 'join' : 'flip');
+    }
+    previousPlayerIds.current = ids;
+  }, [state.players]);
 
   const onlineById = new Map<string, boolean>();
   state.players.forEach((player) => {
@@ -106,13 +124,25 @@ export function LobbyView({
 
   async function copyCode() {
     const ok = await copyText(code);
-    playClick();
+    if (ok) {
+      setCopied('code');
+      playClick();
+    } else {
+      sound.play('oops');
+      haptics.error();
+    }
     toast(ok ? t('invite.codeCopied') : t('invite.copyFailed'), ok ? 'success' : 'error');
   }
 
   async function copyLink() {
     const ok = await copyText(url);
-    playClick();
+    if (ok) {
+      setCopied('link');
+      playClick();
+    } else {
+      sound.play('oops');
+      haptics.error();
+    }
     toast(ok ? t('invite.linkCopied') : t('invite.copyFailed'), ok ? 'success' : 'error');
   }
 
@@ -191,7 +221,11 @@ export function LobbyView({
             </span>
             <span className="block font-mono text-xl font-bold tracking-[0.2em] text-ink">{code}</span>
           </span>
-          <Copy className="h-4 w-4 text-ink-faint transition-colors group-hover:text-terracotta" aria-hidden />
+          {copied === 'code' ? (
+            <Check className="h-4 w-4 text-leaf" aria-hidden />
+          ) : (
+            <Copy className="h-4 w-4 text-ink-faint transition-colors group-hover:text-terracotta" aria-hidden />
+          )}
         </button>
       </header>
 
@@ -201,7 +235,7 @@ export function LobbyView({
             <h2 id="lobby-seats" className="font-hand text-xl font-bold text-ink">
               {t('common.seats')}
             </h2>
-            <span className="rounded-full border border-ink/10 bg-paper-light/70 px-2.5 py-0.5 text-[11px] font-semibold text-ink-soft">
+            <span className="rounded-full border border-ink/10 bg-paper-light px-2.5 py-0.5 text-[11px] font-semibold text-ink-soft">
               {t('lobby.seatsReady', { ready: localizeNumber(readyCount, language) })}
             </span>
           </div>
@@ -218,7 +252,7 @@ export function LobbyView({
                       setInviteOpen(true);
                       playClick();
                     }}
-                    className="group relative flex min-h-[158px] w-full flex-col items-center justify-center gap-1 rounded-[12px] border-2 border-dashed border-ink/20 bg-paper/[0.35] px-3 py-4 text-center transition-colors hover:border-ink/35 hover:bg-paper-light/50"
+                    className="group relative flex min-h-[158px] w-full flex-col items-center justify-center gap-1 rounded-[12px] border-2 border-dashed border-ink/20 bg-paper-light/70 px-3 py-4 text-center transition-all hover:-translate-y-0.5 hover:border-ink/35 hover:bg-paper-light hover:shadow-paper"
                   >
                     <span className="absolute left-2.5 top-1.5 font-hand text-xs font-semibold text-ink-faint">
                       {localizeNumber(seat, language)}
@@ -240,9 +274,10 @@ export function LobbyView({
                   layout
                   initial={{ opacity: 0, y: 8, scale: 0.98 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
+                  whileHover={{ y: -3 }}
                   transition={{ duration: 0.22 }}
                   className={cn(
-                    'relative flex min-h-[158px] flex-col items-center justify-center rounded-[12px] border-2 px-3 py-4 text-center shadow-paper',
+                    'relative flex min-h-[158px] flex-col items-center justify-center rounded-[12px] border-2 px-3 py-4 text-center shadow-paper transition-shadow hover:shadow-paper-lift',
                     isMe ? 'border-mustard/70 bg-[#fffaec]' : 'border-ink/10 bg-paper-light',
                     !online && 'bg-paper-deep/30',
                   )}
@@ -297,7 +332,7 @@ export function LobbyView({
 
                   <div className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold">
                     {!online ? (
-                      <span className="inline-flex items-center gap-1 text-terracotta/80">
+                      <span className="inline-flex items-center gap-1 text-terracotta">
                         <WifiOff className="h-3 w-3" aria-hidden />
                         {t('lobby.offlineSeat')}
                       </span>
@@ -318,13 +353,13 @@ export function LobbyView({
             })}
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ink/10 bg-paper-light/50 px-3 py-2 text-[11px] leading-snug text-ink-soft">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ink/10 bg-paper-light px-3 py-2 text-[11px] leading-snug text-ink-soft">
             <span className="inline-flex items-center gap-1.5">
               <UserPlus className="h-3.5 w-3.5 text-teal" aria-hidden />
               {allFilled ? t('lobby.full') : t('lobby.waitingForPlayers')}
             </span>
             {waitingNames.length > 0 && allFilled && (
-              <span className="font-hand text-sm text-terracotta/80">
+              <span className="font-hand text-sm text-terracotta">
                 {t('lobby.waitingFor', { names: waitingNames.slice(0, 3).join(', ') })}
               </span>
             )}
@@ -504,7 +539,7 @@ export function LobbyView({
             <button
               type="button"
               onClick={() => void copyCode()}
-              className="mt-3 flex w-full items-center justify-between gap-3 rounded-lg border-2 border-dashed border-ink/20 bg-paper/60 px-3 py-2 text-left transition-colors hover:border-teal/50"
+              className="mt-3 flex w-full items-center justify-between gap-3 rounded-lg border-2 border-dashed border-ink/20 bg-paper-light px-3 py-2 text-left transition-colors hover:border-teal/50"
             >
               <span>
                 <span className="block text-[9px] font-bold uppercase tracking-[0.14em] text-ink-faint">
@@ -512,12 +547,21 @@ export function LobbyView({
                 </span>
                 <span className="block font-mono text-lg font-bold tracking-[0.22em] text-ink">{code}</span>
               </span>
-              <Copy className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
+              {copied === 'code' ? (
+                <Check className="h-4 w-4 shrink-0 text-leaf" aria-hidden />
+              ) : (
+                <Copy className="h-4 w-4 shrink-0 text-ink-faint" aria-hidden />
+              )}
             </button>
 
             <div className="mt-2 grid grid-cols-2 gap-2">
-              <Button size="sm" variant="paper" onClick={() => void copyLink()} leftIcon={<Link2 className="h-3.5 w-3.5" aria-hidden />}>
-                {t('lobby.copyLink')}
+              <Button
+                size="sm"
+                variant="paper"
+                onClick={() => void copyLink()}
+                leftIcon={copied === 'link' ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Link2 className="h-3.5 w-3.5" aria-hidden />}
+              >
+                {copied === 'link' ? t('invite.linkCopied') : t('lobby.copyLink')}
               </Button>
               <Button
                 size="sm"
@@ -565,9 +609,9 @@ export function LobbyView({
               variant="paper"
               className="mt-2"
               onClick={() => void copyCode()}
-              leftIcon={<Copy className="h-3.5 w-3.5" aria-hidden />}
+              leftIcon={copied === 'code' ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />}
             >
-              {t('lobby.copyCode')}
+              {copied === 'code' ? t('invite.codeCopied') : t('lobby.copyCode')}
             </Button>
           </div>
 
@@ -575,7 +619,7 @@ export function LobbyView({
             <button
               type="button"
               onClick={() => openSocial(whatsappUrl(inviteMessage))}
-              className="flex min-h-12 items-center gap-3 rounded-xl border-2 border-ink/10 bg-paper-light px-3 py-2 text-left text-sm font-semibold text-ink transition-colors hover:border-leaf/50"
+              className="flex min-h-12 items-center gap-3 rounded-xl border-2 border-ink/10 bg-paper-light px-3 py-2 text-left text-sm font-semibold text-ink transition-all hover:-translate-y-0.5 hover:border-leaf/50"
             >
               <MessageCircle className="h-5 w-5 shrink-0 text-leaf" aria-hidden />
               {t('lobby.whatsapp')}
@@ -583,7 +627,7 @@ export function LobbyView({
             <button
               type="button"
               onClick={() => openSocial(messengerUrl(url))}
-              className="flex min-h-12 items-center gap-3 rounded-xl border-2 border-ink/10 bg-paper-light px-3 py-2 text-left text-sm font-semibold text-ink transition-colors hover:border-sky/50"
+              className="flex min-h-12 items-center gap-3 rounded-xl border-2 border-ink/10 bg-paper-light px-3 py-2 text-left text-sm font-semibold text-ink transition-all hover:-translate-y-0.5 hover:border-sky/50"
             >
               <Facebook className="h-5 w-5 shrink-0 text-sky" aria-hidden />
               {t('lobby.messenger')}
@@ -591,7 +635,7 @@ export function LobbyView({
             <button
               type="button"
               onClick={() => openSocial(telegramUrl(inviteMessage, url))}
-              className="flex min-h-12 items-center gap-3 rounded-xl border-2 border-ink/10 bg-paper-light px-3 py-2 text-left text-sm font-semibold text-ink transition-colors hover:border-sky/50"
+              className="flex min-h-12 items-center gap-3 rounded-xl border-2 border-ink/10 bg-paper-light px-3 py-2 text-left text-sm font-semibold text-ink transition-all hover:-translate-y-0.5 hover:border-sky/50"
             >
               <Send className="h-5 w-5 shrink-0 text-sky" aria-hidden />
               {t('lobby.telegram')}
@@ -599,7 +643,7 @@ export function LobbyView({
             <button
               type="button"
               onClick={() => void copyLink()}
-              className="flex min-h-12 items-center gap-3 rounded-xl border-2 border-ink/10 bg-paper-light px-3 py-2 text-left text-sm font-semibold text-ink transition-colors hover:border-ink/30"
+              className="flex min-h-12 items-center gap-3 rounded-xl border-2 border-ink/10 bg-paper-light px-3 py-2 text-left text-sm font-semibold text-ink transition-all hover:-translate-y-0.5 hover:border-ink/30"
             >
               <Link2 className="h-5 w-5 shrink-0 text-ink-soft" aria-hidden />
               {t('invite.copyLink')}

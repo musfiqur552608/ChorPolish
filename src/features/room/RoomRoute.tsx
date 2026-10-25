@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { GAME_CONFIG } from '@/config/game';
 import { useToastStore } from '@/hooks/useToastStore';
+import { cn } from '@/lib/cn';
 import { loadProfileDraft } from '@/lib/profileDraft';
 import { sound } from '@/lib/sound';
 import { haptics } from '@/lib/haptics';
@@ -102,6 +103,7 @@ export function RoomRoute() {
               title={t('room.setupTitle')}
               subtitle={t('room.setupBody')}
               fullScreen={false}
+              dark
             />
             <Button
               className="mt-8"
@@ -205,7 +207,10 @@ export function RoomRoute() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             transition={{ duration: 0.25 }}
-            className="relative min-h-screen"
+            className={cn(
+              'relative min-h-screen',
+              state.room.status === 'lobby' && 'bg-paper',
+            )}
           >
             {state.room.status === 'lobby' ? (
               <LobbyView

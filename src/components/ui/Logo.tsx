@@ -44,7 +44,7 @@ interface LogoProps {
 
 export function Logo({ compact = false, inverted = false, className }: LogoProps) {
   return (
-    <span className={cn('inline-flex items-center gap-2.5', className)}>
+    <span className={cn('inline-flex shrink-0 items-center gap-2.5', className)}>
       <span
         className={cn(
           'relative grid place-items-center rounded-[10px] border-2 shadow-[0_2px_0_rgba(32,51,70,.2)]',
@@ -58,7 +58,7 @@ export function Logo({ compact = false, inverted = false, className }: LogoProps
       <span className="flex flex-col leading-none">
         <span
           className={cn(
-            'font-display font-bold tracking-tight',
+            'whitespace-nowrap font-display font-bold tracking-tight',
             inverted ? 'text-paper-light' : 'text-ink',
             compact ? 'text-[22px]' : 'text-2xl',
           )}
@@ -68,8 +68,8 @@ export function Logo({ compact = false, inverted = false, className }: LogoProps
         {!compact && (
           <span
             className={cn(
-              'mt-1 font-hand text-[14px] font-semibold tracking-[0.18em]',
-              inverted ? 'text-paper/65' : 'text-ink-soft',
+              'mt-1 whitespace-nowrap font-hand text-[14px] font-semibold tracking-[0.18em]',
+              inverted ? 'text-paper/85' : 'text-ink-soft',
             )}
           >
             CHOR POLICE

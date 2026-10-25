@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft,
@@ -89,6 +89,87 @@ export function GameTable({ session }: GameTableProps) {
     }
   }, [round?.phaseDeadline]);
 
+  // One sound per phase entry. State polls re-render constantly, so the cue
+  // key keeps the same phase from replaying its sound on every refresh.
+  const phaseCueRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!round) return;
+    // Wait for the player list before choosing the match-end cue.
+    if (round.phase === 'MATCH_END' && players.length === 0) return;
+    const cue = `${round.id}:${round.phase}`;
+    if (phaseCueRef.current === cue) return;
+    phaseCueRef.current = cue;
+    switch (round.phase) {
+      case 'SHUFFLE':
+        sound.play('shuffle');
+        break;
+      case 'DRAW':
+        sound.play('flip');
+        break;
+      case 'HIDDEN_ROLES':
+        sound.play('peek');
+        break;
+      case 'BABU_REVEAL':
+        sound.play('peek');
+        break;
+      case 'POLICE_REVEAL':
+        sound.play('click');
+        break;
+      case 'BABU_ORDER':
+        sound.play('write');
+        break;
+      case 'POLICE_GUESS':
+        sound.play('gavel');
+        break;
+      case 'FINAL_REVEAL':
+        sound.play(round.guessCorrect ? 'cheer' : 'oops');
+        break;
+      case 'ROUND_RESULT':
+        sound.play('write');
+        break;
+      case 'MATCH_END': {
+        const topScore = players.reduce((max, player) => Math.max(max, player.totalScore), 0);
+        const myScore = mePlayer?.totalScore ?? 0;
+        const hasScores = players.some((player) => player.totalScore > 0);
+        sound.play(hasScores && myScore >= topScore ? 'win' : 'cheer');
+        break;
+      }
+      default:
+        break;
+    }
+  }, [round, players, mePlayer]);
+
+  // Tick the final five seconds of any timed phase.
+  const lastTickRef = useRef(0);
+  useEffect(() => {
+    const deadline = round?.phaseDeadline ? Date.parse(round.phaseDeadline) : 0;
+    lastTickRef.current = 0;
+    if (!deadline || !isPlaying) return;
+    const timer = window.setInterval(() => {
+      const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      if (remaining > 0 && remaining <= 5 && lastTickRef.current !== remaining) {
+        lastTickRef.current = remaining;
+        sound.play('tick');
+      }
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [round?.phaseDeadline, isPlaying]);
+
+  // Connection/pause cues are edge-triggered, not repeated by polling.
+  const wasConnectedRef = useRef(connected);
+  useEffect(() => {
+    if (wasConnectedRef.current && !connected) sound.play('oops');
+    if (!wasConnectedRef.current && connected) sound.play('join');
+    wasConnectedRef.current = connected;
+  }, [connected]);
+
+  const wasPausedRef = useRef(isPaused);
+  useEffect(() => {
+    if (isPaused && !wasPausedRef.current) sound.play('oops');
+    if (!isPaused && wasPausedRef.current) sound.play('join');
+    wasPausedRef.current = isPaused;
+  }, [isPaused]);
+
   // Every new round starts with a fresh, face-up private slip.
   useEffect(() => {
     setSlipHidden(false);
@@ -173,7 +254,6 @@ export function GameTable({ session }: GameTableProps) {
   // ── Actions ──
   const handlePick = useCallback(
     async (slot: number) => {
-      playClick();
       await pick(slot);
     },
     [pick],
@@ -190,32 +270,26 @@ export function GameTable({ session }: GameTableProps) {
 
   const confirmGuess = useCallback(async () => {
     if (!guessTargetId) return;
-    const ok = await guess(guessTargetId);
+    await guess(guessTargetId);
     setGuessConfirmOpen(false);
     setGuessTargetId(null);
-    if (ok) sound.play('gavel');
   }, [guess, guessTargetId]);
 
   const handleAdvance = useCallback(async () => {
     if (!round?.phase) return;
-    playClick();
     await advance();
-    sound.play('write');
   }, [advance, round?.phase]);
 
   // ── Manual reveal steps ──
   const handleBabuRise = useCallback(async () => {
-    playClick();
     await babuRise();
   }, [babuRise]);
 
   const handleAskPolice = useCallback(async () => {
-    playClick();
     await askPolice();
   }, [askPolice]);
 
   const handlePoliceRise = useCallback(async () => {
-    playClick();
     await policeRise();
   }, [policeRise]);
 
@@ -290,13 +364,13 @@ export function GameTable({ session }: GameTableProps) {
           <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ink/10 bg-paper-light text-ink font-bold text-xs">
             {localizeNumber(currentRoundNumber, language)}
           </span>
-          <span className="font-display text-[18px] font-bold leading-none text-ink">{t('common.round')} {localizeNumber(currentRoundNumber, language)}</span>
+          <span className="font-display text-[18px] font-bold leading-none text-paper-light drop-shadow-[0_1px_2px_rgba(12,35,31,0.55)]">{t('common.round')} {localizeNumber(currentRoundNumber, language)}</span>
         </div>
         <div className="flex items-end gap-1.5 text-right">
           {round?.phaseDeadline ? (
             <>
-              <span className="font-mono text-[20px] font-bold text-terracotta">{secondsLeft()}</span>
-              <span className="text-[11px] font-semibold text-ink-soft">{t('common.seconds', { count: secondsLeft() })}</span>
+              <span className="font-mono text-[20px] font-bold text-[#ffd47a] drop-shadow-[0_1px_2px_rgba(12,35,31,0.6)]">{localizeNumber(secondsLeft(), language)}</span>
+              <span className="text-[11px] font-semibold text-paper/80">{t('common.seconds', { count: secondsLeft() })}</span>
             </>
           ) : (
             <span className="rounded-full border border-ink/10 bg-paper-light px-2.5 py-0.5 text-[10px] font-semibold text-ink-soft">
@@ -318,7 +392,7 @@ export function GameTable({ session }: GameTableProps) {
   const renderMySlipCard = () => {
     if (!myRole) return null;
     return (
-      <div className="paper mx-auto flex w-full max-w-sm flex-col items-center gap-2 rounded-[12px] border border-mustard/40 bg-mustard/[0.06] p-5 text-center shadow-sm">
+      <div className="paper mx-auto flex w-full max-w-sm flex-col items-center gap-2 rounded-[12px] border border-mustard/40 bg-[#fff8e6] p-5 text-center shadow-paper">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-faint">
           {t('game.yourSlip')}
         </p>
@@ -362,6 +436,7 @@ export function GameTable({ session }: GameTableProps) {
             whileTap={canPickThis ? { scale: 0.96 } : undefined}
             className={cn(
               'group relative aspect-square rounded-[8px] border-2 shadow-sm flex flex-col items-center justify-center transition-all',
+              canPickThis && 'motion-safe:animate-pulse-ring',
               taken
                 ? 'border-terracotta/20 bg-terracotta/[0.05]'
                 : available
@@ -381,7 +456,7 @@ export function GameTable({ session }: GameTableProps) {
               aria-label={t('game.tapToPeek')}
             />
             {taken && (
-              <span className="absolute inset-0 flex items-center justify-center rounded-[8px] bg-ink/25 backdrop-blur text-[10px] font-bold text-ink/60">
+              <span className="absolute inset-0 flex items-center justify-center rounded-[8px] bg-ink/55 backdrop-blur text-[10px] font-bold text-paper-light">
                 ✔
               </span>
             )}
@@ -525,8 +600,8 @@ export function GameTable({ session }: GameTableProps) {
                 className={cn(
                   'flex min-w-0 flex-col items-center gap-1 rounded-lg border px-2 py-2 text-center',
                   role === 'BABU'
-                    ? 'border-mustard bg-mustard/[0.10]'
-                    : 'border-ink/10 bg-paper-light/60',
+                    ? 'border-mustard bg-[#fff8e6]'
+                    : 'border-ink/10 bg-paper-light',
                 )}
               >
                 <span className="text-xl" aria-hidden>{player.avatar}</span>
@@ -602,8 +677,8 @@ export function GameTable({ session }: GameTableProps) {
                 className={cn(
                   'flex min-w-0 flex-col items-center gap-1 rounded-lg border px-2 py-2 text-center',
                   role === 'POLICE'
-                    ? 'border-teal bg-teal/[0.08]'
-                    : 'border-ink/10 bg-paper-light/60',
+                    ? 'border-teal bg-[#eef8f6]'
+                    : 'border-ink/10 bg-paper-light',
                 )}
               >
                 <span className="text-xl" aria-hidden>{player.avatar}</span>
@@ -625,7 +700,7 @@ export function GameTable({ session }: GameTableProps) {
       <section className="space-y-4">
         <div className={cn(
           'paper flex items-center gap-3 rounded-[12px] border p-4 shadow-sm',
-          policePlayer ? 'border-teal/40 bg-teal/[0.04]' : 'border-ink/10',
+          policePlayer ? 'border-teal/40 bg-[#eef8f6]' : 'border-ink/10',
         )}>
           <RoleSlip role="POLICE" size="sm" showBrand={false} />
           <div className="min-w-0 flex-1">
@@ -659,11 +734,11 @@ export function GameTable({ session }: GameTableProps) {
                 className={cn(
                   'relative flex flex-col items-center gap-2 rounded-[12px] border-2 p-5 shadow-sm transition-all',
                   pickedThis
-                    ? 'border-leaf bg-leaf/[0.08]'
+                    ? 'border-leaf bg-[#f2fbf6]'
                     : canPick
                       ? 'border-ink/10 bg-paper-light hover:-translate-y-0.5 hover:border-mustard'
-                      : 'border-ink/10 bg-paper-light/70',
-                  !canPick && !pickedThis && 'opacity-70',
+                      : 'border-ink/10 bg-paper-light',
+                  !canPick && !pickedThis && 'opacity-85',
                 )}
               >
                 <span className="text-4xl" aria-hidden>{player.avatar}</span>
@@ -686,7 +761,7 @@ export function GameTable({ session }: GameTableProps) {
           })}
         </div>
 
-        <p className="text-center text-sm text-ink-soft">
+        <p className="desk-label-soft text-center text-sm">
           {picked
             ? t('game.policePickedWait')
             : isPolice
@@ -702,8 +777,8 @@ export function GameTable({ session }: GameTableProps) {
     return (
       <section className="space-y-4">
         <div className={cn(
-          'rounded-[12px] border-2 p-5 text-center shadow-sm',
-          caught ? 'border-leaf bg-leaf/[0.06]' : 'border-terracotta bg-terracotta/[0.06]',
+          'paper rounded-[12px] border-2 p-5 text-center shadow-paper',
+          caught ? 'border-leaf bg-[#f2fbf6]' : 'border-terracotta bg-[#fff3ef]',
         )}>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-faint">
             {t('game.policePickTag')}
@@ -727,7 +802,7 @@ export function GameTable({ session }: GameTableProps) {
                 key={player.id}
                 className={cn(
                   'relative flex flex-col items-center gap-1.5 rounded-[12px] border-2 p-4 text-center shadow-sm',
-                  picked ? 'border-mustard bg-mustard/[0.08]' : 'border-ink/10 bg-paper-light',
+                  picked ? 'border-mustard bg-[#fff8e6]' : 'border-ink/10 bg-paper-light',
                 )}
               >
                 <span className="text-4xl" aria-hidden>{player.avatar}</span>
@@ -756,7 +831,7 @@ export function GameTable({ session }: GameTableProps) {
       {round?.phase === 'BABU_REVEAL' && babuPlayer && (
         <div className="flex flex-col items-center justify-center min-h-[240px]">
           <RoleSlip size="hero" role="BABU" animateIn />
-          <p className="mt-4 text-sm font-semibold text-ink">
+          <p className="desk-label mt-4 text-sm font-semibold">
             {babuPlayer.avatar} {babuPlayer.name} — {t('game.babuSpeech')}
           </p>
         </div>
@@ -764,7 +839,7 @@ export function GameTable({ session }: GameTableProps) {
       {round?.phase === 'POLICE_REVEAL' && policePlayer && (
         <div className="flex flex-col items-center justify-center min-h-[240px]">
           <RoleSlip size="hero" role="POLICE" animateIn />
-          <p className="mt-4 text-sm font-semibold text-ink">
+          <p className="desk-label mt-4 text-sm font-semibold">
             {policePlayer.avatar} {policePlayer.name} — {t('game.policeSpeech')}
           </p>
         </div>
@@ -772,8 +847,8 @@ export function GameTable({ session }: GameTableProps) {
       {round?.phase === 'BABU_ORDER' && babuPlayer && (
         <div className="flex flex-col items-center justify-center min-h-[240px]">
           <span className="text-4xl mb-2">{babuPlayer.avatar}</span>
-          <p className="font-display text-lg font-bold text-ink">{t('game.orderFind', { role: targetLabel })}</p>
-          <p className="mt-1 text-sm text-ink-soft">{t('game.orderSub')}</p>
+          <p className="desk-label font-display text-lg font-bold">{t('game.orderFind', { role: targetLabel })}</p>
+          <p className="desk-label-soft mt-1 text-sm">{t('game.orderSub')}</p>
         </div>
       )}
     </div>
@@ -808,8 +883,8 @@ export function GameTable({ session }: GameTableProps) {
     return (
       <section className="space-y-4">
         <div className={cn(
-          'rounded-[10px] border-2 p-5 text-center shadow-sm flex flex-col items-center justify-center min-h-[220px]',
-          caught ? 'border-leaf bg-leaf/[0.05]' : 'border-terracotta bg-terracotta/[0.05]',
+          'paper rounded-[10px] border-2 p-5 text-center shadow-paper flex flex-col items-center justify-center min-h-[220px]',
+          caught ? 'border-leaf bg-[#f2fbf6]' : 'border-terracotta bg-[#fff3ef]',
         )}>
           <span className="text-4xl mb-2">{caught ? '🪢' : '💨'}</span>
           <h3 className="font-display text-lg font-bold text-ink">
@@ -843,7 +918,7 @@ export function GameTable({ session }: GameTableProps) {
           {players.map((player) => {
             const result = roundResults.find((r) => r.playerId === player.id);
             return (
-              <span key={player.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ink/10 bg-paper-light/50 text-center min-w-[70px]">
+              <span key={player.id} className="flex items-center gap-1.5 rounded-lg border border-ink/10 bg-paper-light px-3 py-1.5 text-center min-w-[70px]">
                 <span className="text-[10px]">{result?.points ?? '–'}</span>
                 <span className="text-[11px] font-semibold text-ink-soft truncate">{player.name}</span>
               </span>
@@ -853,7 +928,7 @@ export function GameTable({ session }: GameTableProps) {
 
         {currentRoundNumber < totalRounds ? (
           <div className="mt-4">
-            <p className="text-center text-sm text-ink-soft mb-3">
+            <p className="desk-label-soft mb-3 text-center text-sm">
               {currentRoundNumber === totalRounds - 1 ? t('game.finalRound') : t('game.nextRound')}
             </p>
             <Button
@@ -868,7 +943,7 @@ export function GameTable({ session }: GameTableProps) {
               {mePlayer?.isHost ? t('game.nextRound') : t('game.waitingHostNext')}
             </Button>
             {!mePlayer?.isHost && (
-              <p className="mt-2 text-center text-[11px] text-ink-soft">{t('game.nextRoundHint')}</p>
+              <p className="desk-label-soft mt-2 text-center text-[11px]">{t('game.nextRoundHint')}</p>
             )}
           </div>
         ) : (
@@ -885,7 +960,7 @@ export function GameTable({ session }: GameTableProps) {
               {mePlayer?.isHost ? t('result.title') : t('game.waitingHostNext')}
             </Button>
             {!mePlayer?.isHost && (
-              <p className="mt-2 text-center text-[11px] text-ink-soft">{t('game.nextRoundHint')}</p>
+              <p className="desk-label-soft mt-2 text-center text-[11px]">{t('game.nextRoundHint')}</p>
             )}
           </div>
         )}
@@ -917,7 +992,7 @@ export function GameTable({ session }: GameTableProps) {
     return (
       <section className="space-y-5">
         {abandoned && (
-          <div className="rounded-[12px] border-2 border-terracotta/30 bg-terracotta/[0.05] p-4 text-center shadow-sm">
+          <div className="paper rounded-[12px] border-2 border-terracotta/30 bg-[#fff3ef] p-4 text-center shadow-paper">
             <p className="text-sm font-semibold text-terracotta">{t('result.abandonedBanner')}</p>
             {!noRounds && (
               <p className="mt-1 text-[12px] leading-snug text-ink-soft">{t('result.partialNote')}</p>
@@ -933,7 +1008,7 @@ export function GameTable({ session }: GameTableProps) {
         )}
 
         {!abandoned && cleanupSeconds !== null && (
-          <p className="rounded-lg border border-terracotta/20 bg-terracotta/[0.04] px-3 py-2 text-center text-[12px] font-medium leading-snug text-terracotta">
+          <p className="rounded-lg border border-terracotta/20 bg-[#fff3ef] px-3 py-2 text-center text-[12px] font-medium leading-snug text-terracotta">
             {cleanupSeconds > 0
               ? t('result.cleanupWarning', { seconds: cleanupSeconds })
               : t('result.cleanupSoon')}
@@ -947,7 +1022,7 @@ export function GameTable({ session }: GameTableProps) {
           </div>
         ) : (
           <>
-            <div className="rounded-[12px] border-2 border-mustard bg-mustard/[0.08] p-6 text-center shadow-sm">
+            <div className="paper rounded-[12px] border-2 border-mustard bg-[#fff8e6] p-6 text-center shadow-paper">
               {isShared ? (
                 <>
                   <h2 className="font-display text-2xl font-bold text-ink">{t('result.sharedTitle')}</h2>
@@ -986,7 +1061,7 @@ export function GameTable({ session }: GameTableProps) {
             />
 
             <div className="space-y-2">
-              <h3 className="font-display text-sm font-bold text-ink uppercase tracking-wider">
+              <h3 className="desk-label font-display text-sm font-bold uppercase tracking-wider">
                 {t('result.ranking')}
               </h3>
               {ranked.map((player) => {
@@ -1000,9 +1075,9 @@ export function GameTable({ session }: GameTableProps) {
                     className={cn(
                       'flex items-center justify-between gap-3 rounded-lg border px-3 py-2 transition-colors',
                       isWinner
-                        ? 'border-mustard bg-mustard/[0.06]'
+                        ? 'border-mustard bg-[#fff8e6]'
                         : isLast
-                          ? 'border-terracotta/20 bg-terracotta/[0.04]'
+                          ? 'border-terracotta/30 bg-[#fff3ef]'
                           : 'border-ink/10 bg-paper-light',
                     )}
                   >
@@ -1014,7 +1089,7 @@ export function GameTable({ session }: GameTableProps) {
                           : place === 3
                             ? '🥉'
                             : localizeNumber(place, language)}
-                      {isWinner && <span className="text-xs text-mustard">{t('result.winnerTag')}</span>}
+                      {isWinner && <span className="text-xs text-mustard-ink">{t('result.winnerTag')}</span>}
                       {isLast && <span className="text-xs text-terracotta">{t('result.loser')}</span>}
                     </span>
                     <div className="flex items-center gap-2 text-right">
@@ -1131,7 +1206,7 @@ export function GameTable({ session }: GameTableProps) {
 
   return (
     <main className="game-desk fullscreen-fallback relative min-h-screen">
-      <header className="relative z-20 sticky top-0 z-[40] border-b border-ink/10 bg-paper-light/80 backdrop-blur-[4px] px-4 py-3 sm:px-6">
+      <header className="relative z-20 sticky top-0 z-[40] border-b border-ink/10 bg-paper-light/95 backdrop-blur-[4px] px-4 py-3 sm:px-6">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-2">
           <button
             type="button"
@@ -1177,17 +1252,28 @@ export function GameTable({ session }: GameTableProps) {
 
       {status === 'loading' ? (
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 pt-20 pb-16">
-          <LoadingScreen title={t('room.loadingTitle')} subtitle={t('room.loadingBody')} fullScreen={false} />
+          <LoadingScreen title={t('room.loadingTitle')} subtitle={t('room.loadingBody')} fullScreen={false} dark />
         </div>
       ) : (
         <>
           {renderPhaseHeader()}
-          {bodyContent}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={`${round?.id ?? 'room'}:${round?.phase ?? room?.status ?? 'empty'}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              aria-live="polite"
+            >
+              {bodyContent}
+            </motion.div>
+          </AnimatePresence>
 
           {/* Reactions bar (only during active play, not result) */}
           {isPlaying && round?.phase && !['ROUND_RESULT', 'MATCH_END'].includes(round.phase) && (
             <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 mt-4">
-              <div className="flex items-center justify-between gap-3 rounded-lg border border-ink/10 bg-paper-light/60 p-3 shadow-sm">
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-ink/10 bg-paper-light p-3 shadow-paper">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-faint">{t('game.reactionTitle')}</span>
                 <div className="flex gap-1">
                   {REACTIONS.map((emoji) => (

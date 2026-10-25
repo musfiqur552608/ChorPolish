@@ -382,6 +382,7 @@ export function useRoomSession({ code, initialName = '', initialAvatar = '' }: S
         const message = userErrorMessage(cause, tRef.current);
         setActionError(message);
         pushToast(message, 'error');
+        sound.play('oops');
         haptics.error();
         return false;
       } finally {
@@ -422,6 +423,7 @@ export function useRoomSession({ code, initialName = '', initialAvatar = '' }: S
         }
         const message = userErrorMessage(cause, tRef.current);
         pushToast(message, 'error');
+        sound.play('oops');
         haptics.error();
         return false;
       } finally {
@@ -439,19 +441,27 @@ export function useRoomSession({ code, initialName = '', initialAvatar = '' }: S
     if (!roomId || !me) return false;
     const nextReady = !me.isReady;
     haptics.tap();
-    return runAction('ready', async () => {
-      await setReady(roomId, nextReady);
-      return null;
-    });
+    return runAction(
+      'ready',
+      async () => {
+        await setReady(roomId, nextReady);
+        return null;
+      },
+      nextReady ? 'join' : 'click',
+    );
   }, [roomId, me, runAction]);
 
   const updateRounds = useCallback(
     async (rounds: number) => {
       if (!roomId) return false;
-      return runAction('rounds', async () => {
-        await setRounds(roomId, rounds);
-        return null;
-      });
+      return runAction(
+        'rounds',
+        async () => {
+          await setRounds(roomId, rounds);
+          return null;
+        },
+        'click',
+      );
     },
     [roomId, runAction],
   );
@@ -459,14 +469,11 @@ export function useRoomSession({ code, initialName = '', initialAvatar = '' }: S
   const start = useCallback(async () => {
     if (!roomId) return false;
     haptics.caught();
-    return runAction(
-      'start',
-      async () => {
-        await startGame(roomId);
-        return null;
-      },
-      'shuffle',
-    );
+    // The SHUFFLE phase entry in GameTable plays the shuffle cue.
+    return runAction('start', async () => {
+      await startGame(roomId);
+      return null;
+    });
   }, [roomId, runAction]);
 
   const pick = useCallback(
@@ -514,21 +521,13 @@ export function useRoomSession({ code, initialName = '', initialAvatar = '' }: S
   const askPolice = useCallback(async () => {
     if (!roomId) return false;
     haptics.tap();
-    return runAction(
-      'ask_police',
-      async () => askPoliceRequest(roomId),
-      'click',
-    );
+    return runAction('ask_police', async () => askPoliceRequest(roomId));
   }, [roomId, runAction]);
 
   const policeRise = useCallback(async () => {
     if (!roomId) return false;
     haptics.tap();
-    return runAction(
-      'police_rise',
-      async () => policeRiseRequest(roomId),
-      'gavel',
-    );
+    return runAction('police_rise', async () => policeRiseRequest(roomId));
   }, [roomId, runAction]);
 
   const advance = useCallback(async () => {
@@ -591,6 +590,8 @@ export function useRoomSession({ code, initialName = '', initialAvatar = '' }: S
         return;
       }
       pushToast(userErrorMessage(cause, tRef.current), 'error');
+      sound.play('oops');
+      haptics.error();
       setBusy(null);
       busyRef.current = null;
     }

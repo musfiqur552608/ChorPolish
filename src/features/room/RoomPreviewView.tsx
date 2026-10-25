@@ -62,6 +62,7 @@ export function RoomPreviewView({
     const trimmed = name.trim();
     if (trimmed.length < 1 || trimmed.length > 20) {
       setNameError(t('errors.INVALID_NAME'));
+      sound.play('oops');
       haptics.error();
       return;
     }

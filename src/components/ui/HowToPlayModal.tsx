@@ -50,9 +50,9 @@ export function HowToPlayModal({ open, onClose }: HowToPlayModalProps) {
             {steps.map((step, index) => (
               <li
                 key={step.title}
-                className="relative rounded-lg border border-ink/10 bg-paper-light/75 p-3.5"
+                className="card-lift relative rounded-lg border border-ink/10 bg-paper-light/75 p-3.5 hover:border-teal/30 hover:bg-paper-light"
               >
-                <span className="absolute right-3 top-2 font-hand text-2xl font-bold text-mustard">
+                <span className="absolute right-3 top-2 font-hand text-2xl font-bold text-mustard-ink">
                   {index + 1}
                 </span>
                 <h4 className="pr-6 text-sm font-bold leading-snug text-ink">{step.title}</h4>

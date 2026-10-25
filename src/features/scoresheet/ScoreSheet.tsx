@@ -178,7 +178,7 @@ export function ScoreSheet({
                   <tr
                     key={roundNumber}
                     className={cn(
-                      'group',
+                      'group transition-colors hover:bg-mustard/[0.04]',
                       isCurrent && 'bg-mustard/[0.09]',
                       !round && !isCurrent && 'opacity-55',
                       dense ? 'h-[29px]' : 'h-[34px]',
@@ -240,7 +240,7 @@ export function ScoreSheet({
                             </motion.span>
                           ) : isCurrent ? (
                             <span
-                              className="inline-block -rotate-2 font-hand text-lg leading-none text-terracotta/55"
+                              className="inline-block -rotate-2 font-hand text-lg leading-none text-terracotta/80"
                               aria-label={t('sheet.current')}
                             >
                               {player.isMe ? '✎' : '· · ·'}
