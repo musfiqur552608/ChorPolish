@@ -47,7 +47,7 @@ export function AvatarPicker({ value, onChange, label, disabled = false, compact
             >
               <span aria-hidden>{avatar}</span>
               {selected && (
-                <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full border border-ink bg-teal text-[10px] text-white">
+                <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full border border-ink bg-teal text-[10px] text-white dark:text-[#0f1f1d]">
                   ✓
                 </span>
               )}

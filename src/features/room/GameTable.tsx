@@ -365,13 +365,13 @@ export function GameTable({ session }: GameTableProps) {
           <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-ink/10 bg-paper-light text-ink font-bold text-xs">
             {localizeNumber(currentRoundNumber, language)}
           </span>
-          <span className="font-display text-[18px] font-bold leading-none text-paper-light drop-shadow-[0_1px_2px_rgba(12,35,31,0.55)]">{t('common.round')} {localizeNumber(currentRoundNumber, language)}</span>
+          <span className="font-display text-[18px] font-bold leading-none desk-label">{t('common.round')} {localizeNumber(currentRoundNumber, language)}</span>
         </div>
         <div className="flex items-end gap-1.5 text-right">
           {round?.phaseDeadline ? (
             <>
               <span className="font-mono text-[20px] font-bold text-[#ffd47a] drop-shadow-[0_1px_2px_rgba(12,35,31,0.6)]">{localizeNumber(secondsLeft(), language)}</span>
-              <span className="text-[11px] font-semibold text-paper/80">{t('common.seconds', { count: secondsLeft() })}</span>
+              <span className="desk-label-soft text-[11px] font-semibold">{t('common.seconds', { count: secondsLeft() })}</span>
             </>
           ) : (
             <span className="rounded-full border border-ink/10 bg-paper-light px-2.5 py-0.5 text-[10px] font-semibold text-ink-soft">
@@ -1041,7 +1041,7 @@ export function GameTable({ session }: GameTableProps) {
               {winners.map((player) => (
                 <span
                   key={player.id}
-                  className="mt-3 inline-flex items-center gap-2 rounded-full border border-mustard bg-mustard px-3 py-1 text-xs font-bold text-mustard-ink"
+                  className="mt-3 inline-flex items-center gap-2 rounded-full border border-mustard bg-mustard px-3 py-1 text-xs font-bold text-[#203346]"
                 >
                   <Crown className="h-3.5 w-3.5" aria-hidden />
                   {t('result.winnerTag')}
@@ -1370,7 +1370,7 @@ export function GameTable({ session }: GameTableProps) {
         onConfirm={() => void confirmLeave()}
         loading={busy === 'leave'}
         extra={
-          <p className="rounded-lg border border-terracotta/20 bg-terracotta/[0.05] px-3 py-2 text-[12px] leading-snug text-terracotta">
+          <p className="rounded-lg border border-terracotta/30 bg-surface-blush px-3 py-2 text-[12px] leading-snug text-terracotta">
             {t('game.leaveWarning')}
           </p>
         }

@@ -287,7 +287,7 @@ export function LobbyView({
                   className={cn(
                     'relative flex min-h-[158px] flex-col items-center justify-center rounded-[12px] border-2 px-3 py-4 text-center shadow-paper transition-shadow hover:shadow-paper-lift',
                     isMe ? 'border-mustard/70 bg-surface-cream' : 'border-ink/10 bg-paper-light',
-                    !online && 'bg-paper-deep/30',
+                    !online && 'grayscale opacity-80',
                   )}
                 >
                   <span className="absolute left-2.5 top-1.5 font-hand text-xs font-semibold text-ink-faint">
@@ -332,7 +332,7 @@ export function LobbyView({
                       </span>
                     )}
                     {player.isHost && (
-                      <span className="rounded-sm bg-mustard/40 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-mustard-ink">
+                      <span className="rounded-sm bg-mustard px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#203346]">
                         {t('common.host')}
                       </span>
                     )}

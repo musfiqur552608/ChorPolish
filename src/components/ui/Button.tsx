@@ -22,7 +22,7 @@ const variants: Record<Variant, string> = {
   accent:
     'border-ink bg-mustard text-[#203346] shadow-[0_4px_0_#203346] hover:bg-mustard/90 active:shadow-[0_1px_0_#203346] dark:shadow-[0_4px_0_rgba(0,0,0,0.6),0_14px_30px_-12px_rgba(240,195,90,0.55)]',
   danger:
-    'border-terracotta bg-terracotta text-white shadow-[0_4px_0_#792d25] hover:bg-terracotta/90 active:shadow-none dark:shadow-[0_4px_0_rgba(0,0,0,0.55)]',
+    'border-terracotta bg-terracotta text-white hover:bg-terracotta/90 active:shadow-none shadow-[0_4px_0_#792d25] dark:shadow-[0_4px_0_rgba(0,0,0,0.55)] dark:text-[#2b1512]',
   ghost: 'border-transparent bg-transparent text-ink hover:bg-ink/5',
   paper:
     'border-ink/15 bg-paper-light text-ink shadow-[0_3px_0_rgba(32,51,70,.13)] hover:border-ink/30 hover:bg-paper active:shadow-none dark:shadow-[0_3px_0_rgba(0,0,0,0.5)] dark:hover:border-[#f0c35a]/40',
