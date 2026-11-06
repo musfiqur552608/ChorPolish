@@ -576,8 +576,19 @@ export function useRoomSession({ code, initialName = '', initialAvatar = '' }: S
     if (busyRef.current) return;
     busyRef.current = 'leave';
     setBusy('leave');
+    const wasPlaying = (stateRef.current?.room.status ?? 'lobby') !== 'lobby';
     try {
       await leaveRoom(roomId);
+      if (wasPlaying) {
+        // The server ends the match on the last completed rounds; stay here so
+        // everyone — including the leaver — can view and download the result.
+        sound.play('dramatic');
+        pushToast(tRef.current('leave.gameOver'), 'info');
+        await syncNow(true);
+        setBusy(null);
+        busyRef.current = null;
+        return;
+      }
       clearRecentRoom();
       sound.play('flip');
       pushToast(tRef.current('leave.left'), 'info');
@@ -595,7 +606,7 @@ export function useRoomSession({ code, initialName = '', initialAvatar = '' }: S
       setBusy(null);
       busyRef.current = null;
     }
-  }, [roomId, navigate, pushToast]);
+  }, [roomId, navigate, pushToast, syncNow]);
 
   const retry = useCallback(() => {
     setBootToken((token) => token + 1);

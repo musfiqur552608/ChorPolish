@@ -35,33 +35,33 @@
 
 :root.dark {
   color-scheme: dark;
-  --paper: 31 40 51;
-  --paper-light: 40 50 63;
-  --paper-deep: 22 29 38;
-  --paper-shadow: 8 12 18;
-  --page: 18 26 34;
-  --notebook: 36 46 58;
-  --ink: 232 238 242;
-  --ink-soft: 180 192 202;
-  --ink-faint: 150 165 178;
-  --terracotta: 232 126 105;
-  --chalk: 232 238 242;
-  --desk: 30 52 48;
-  --desk-dark: 20 36 33;
-  --mustard: 240 195 90;
-  --mustard-ink: 240 195 90;
-  --teal: 106 180 168;
+  --paper: 26 36 48;
+  --paper-light: 38 52 68;
+  --paper-deep: 20 29 39;
+  --paper-shadow: 5 8 13;
+  --page: 15 23 33;
+  --notebook: 34 47 62;
+  --ink: 238 244 248;
+  --ink-soft: 194 211 224;
+  --ink-faint: 160 178 194;
+  --terracotta: 240 140 110;
+  --chalk: 238 244 248;
+  --desk: 26 48 44;
+  --desk-dark: 16 32 29;
+  --mustard: 246 203 95;
+  --mustard-ink: 246 203 95;
+  --teal: 110 192 180;
   --rose: 224 125 143;
-  --sky: 125 175 205;
-  --leaf: 110 170 130;
-  --surface-cream: 56 48 28;
-  --surface-mint: 30 48 40;
-  --surface-teal: 26 44 42;
-  --surface-blush: 52 34 34;
-  --rule: rgba(125, 160, 190, 0.22);
-  --margin-red: rgba(232, 126, 105, 0.42);
-  --seal: #e89e8d;
-  --tape: rgba(120, 130, 140, 0.3);
+  --sky: 138 184 214;
+  --leaf: 122 186 142;
+  --surface-cream: 62 52 28;
+  --surface-mint: 32 54 42;
+  --surface-teal: 28 50 48;
+  --surface-blush: 58 36 36;
+  --rule: rgba(138, 184, 214, 0.28);
+  --margin-red: rgba(240, 140, 110, 0.52);
+  --seal: #f0a08a;
+  --tape: rgba(246, 203, 95, 0.18);
 }
 
 * {
@@ -98,8 +98,15 @@ body::before {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E");
 }
 
-.dark body::before {
+  .dark body::before {
   opacity: 0.16;
+}
+
+.dark body {
+  background-image:
+    radial-gradient(ellipse 60% 40% at 50% -8%, rgba(246, 203, 95, 0.09), transparent 65%),
+    radial-gradient(ellipse 50% 35% at 85% 15%, rgba(110, 192, 180, 0.07), transparent 60%);
+  background-attachment: fixed;
 }
 
 ::selection {
@@ -345,13 +352,14 @@ p {
   }
 
   .dark .premium-glass {
-    background: linear-gradient(145deg, rgba(40, 50, 63, 0.72), rgba(22, 29, 38, 0.82) 50%, rgba(240, 195, 90, 0.08));
-    -webkit-backdrop-filter: blur(18px) saturate(1.3);
-    backdrop-filter: blur(18px) saturate(1.3);
+    background: linear-gradient(145deg, rgba(38, 52, 68, 0.85), rgba(20, 29, 39, 0.88) 50%, rgba(246, 203, 95, 0.1));
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    backdrop-filter: blur(20px) saturate(1.4);
     box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.09) inset,
-      0 22px 48px -20px rgba(0, 0, 0, 0.75),
-      0 0 0 1px rgba(240, 195, 90, 0.12);
+      0 1px 0 rgba(255, 255, 255, 0.1) inset,
+      0 24px 54px -22px rgba(0, 0, 0, 0.8),
+      0 0 0 1px rgba(246, 203, 95, 0.16),
+      0 12px 36px -20px rgba(246, 203, 95, 0.35);
   }
 
   .gold-text {
@@ -483,11 +491,12 @@ p {
 
   .dark .game-desk {
     background-image:
-      radial-gradient(ellipse at 50% 0%, rgba(255, 250, 225, 0.05), transparent 55%),
+      radial-gradient(ellipse at 50% 0%, rgba(246, 203, 95, 0.12), transparent 55%),
+      radial-gradient(ellipse at 50% 70%, rgba(110, 192, 180, 0.08), transparent 60%),
       repeating-linear-gradient(
         100deg,
-        rgba(0, 0, 0, 0.12) 0,
-        rgba(0, 0, 0, 0.12) 1px,
+        rgba(0, 0, 0, 0.14) 0,
+        rgba(0, 0, 0, 0.14) 1px,
         transparent 1px,
         transparent 9px
       ),

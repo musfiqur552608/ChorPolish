@@ -20,6 +20,7 @@ const RPCS = '20261023000200_game_rpcs.sql';
 const MANUAL = '20261024000400_manual_flow.sql';
 const CLEANUP = '20261024000500_scheduled_cleanup.sql';
 const END = '20261024000600_end_of_room_cleanup.sql';
+const LEAVE = '20261024000700_leave_ends_match.sql';
 
 describe('migration set', () => {
   it('ships every required migration in order and no unsafe 003 draft', () => {
@@ -27,13 +28,14 @@ describe('migration set', () => {
       .filter((file) => file.endsWith('.sql'))
       .sort();
 
-    for (const file of [INIT, RPCS, MANUAL, CLEANUP, END]) {
+    for (const file of [INIT, RPCS, MANUAL, CLEANUP, END, LEAVE]) {
       expect(files).toContain(file);
     }
     expect(files.indexOf(INIT)).toBeLessThan(files.indexOf(RPCS));
     expect(files.indexOf(RPCS)).toBeLessThan(files.indexOf(MANUAL));
     expect(files.indexOf(MANUAL)).toBeLessThan(files.indexOf(CLEANUP));
     expect(files.indexOf(CLEANUP)).toBeLessThan(files.indexOf(END));
+    expect(files.indexOf(END)).toBeLessThan(files.indexOf(LEAVE));
     expect(existsSync(resolve(MIGRATIONS_DIR, '20261023000300_cleanup_migration.sql'))).toBe(false);
   });
 });
@@ -195,5 +197,28 @@ describe('end-of-room deletion (006)', () => {
     expect(endCode).toMatch(
       /revoke all on function public\.cleanup_rooms\(\) from public, anon, authenticated;/i,
     );
+  });
+});
+
+describe('leave ends match (007)', () => {
+  const leave = read(LEAVE);
+  const leaveCode = withoutComments(leave);
+
+  it('finalizes a playing match instead of deleting the room', () => {
+    expect(leaveCode).toContain("perform public.finalize_room(p_room_id, 'left');");
+    expect(leaveCode).toMatch(/if v_room\.status = 'playing' then/);
+  });
+
+  it('keeps the leaver on the result for download', () => {
+    expect(leaveCode).not.toContain('delete from public.players where room_id');
+    expect(leaveCode).toContain("set is_online = false, disconnected_at = now()");
+  });
+
+  it('keeps lobby leave behavior unchanged', () => {
+    expect(leaveCode).toMatch(/if v_room\.status = 'lobby' then/);
+  });
+
+  it('keeps leave_room behind authenticated grants only', () => {
+    expect(leaveCode).toMatch(/grant execute on function public\.leave_room\(uuid\) to authenticated;/i);
   });
 });

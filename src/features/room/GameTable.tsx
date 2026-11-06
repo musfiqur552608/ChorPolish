@@ -976,7 +976,8 @@ export function GameTable({ session }: GameTableProps) {
     const winners = ranked.filter((player) => player.rank === 1);
     const isShared = winners.length > 1;
     const lastRank = Math.max(...ranked.map((player) => player.rank));
-    const abandoned = room?.finishedReason === 'abandoned';
+    const leftMatch = room?.finishedReason === 'left';
+    const abandoned = room?.finishedReason === 'abandoned' || leftMatch;
     // A match that stopped during round one has no result to rank.
     const noRounds = history.length === 0;
     const cleanupSeconds = room?.cleanupAt ? secondsUntil(room.cleanupAt) : null;
@@ -994,7 +995,7 @@ export function GameTable({ session }: GameTableProps) {
       <section className="space-y-5">
         {abandoned && (
           <div className="paper rounded-[12px] border-2 border-terracotta/30 bg-surface-blush p-4 text-center shadow-paper">
-            <p className="text-sm font-semibold text-terracotta">{t('result.abandonedBanner')}</p>
+            <p className="text-sm font-semibold text-terracotta">{t(leftMatch ? 'result.leftBanner' : 'result.abandonedBanner')}</p>
             {!noRounds && (
               <p className="mt-1 text-[12px] leading-snug text-ink-soft">{t('result.partialNote')}</p>
             )}
