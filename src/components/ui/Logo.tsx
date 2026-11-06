@@ -5,11 +5,11 @@ export function PoliceCap({ className }: { className?: string }) {
     <svg viewBox="0 0 64 64" fill="none" aria-hidden className={className}>
       <path
         d="M10.5 39.5c2.7 7.7 10.8 12 21.5 12s18.8-4.3 21.5-12l-4.2-2.6c-3.3 3-9.3 4.8-17.3 4.8s-14-1.8-17.3-4.8l-4.2 2.6Z"
-        fill="#203346"
+        fill="currentColor"
       />
       <path
         d="M16.5 37.6h31c-.2-4.9-2.1-8.6-4.4-9.4-3.2-1.2-7.4 1.8-11.1 1.8s-7.9-3-11.1-1.8c-2.3.8-4.2 4.5-4.4 9.4Z"
-        fill="#203346"
+        fill="currentColor"
       />
       <path
         d="M16 38.3c0 2.7 7.3 4.6 16 4.6s16-1.9 16-4.6"
@@ -48,7 +48,7 @@ export function Logo({ compact = false, inverted = false, className }: LogoProps
       <span
         className={cn(
           'relative grid place-items-center rounded-[10px] border-2 shadow-[0_2px_0_rgba(32,51,70,.2)]',
-          inverted ? 'border-paper/30 bg-paper' : 'border-ink/15 bg-paper-light',
+          inverted ? 'border-paper/30 bg-paper text-paper-light' : 'border-ink/15 bg-paper-light text-ink',
           compact ? 'h-10 w-10' : 'h-11 w-11 rotate-[-3deg]',
         )}
       >

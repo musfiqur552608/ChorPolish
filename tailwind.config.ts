@@ -1,33 +1,40 @@
 import type { Config } from 'tailwindcss';
 
 export default {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
         paper: {
-          DEFAULT: '#f8f1df',
-          light: '#fffdf6',
-          deep: '#efe3c8',
-          shadow: '#d8c9ab',
+          DEFAULT: 'rgb(var(--paper) / <alpha-value>)',
+          light: 'rgb(var(--paper-light) / <alpha-value>)',
+          deep: 'rgb(var(--paper-deep) / <alpha-value>)',
+          shadow: 'rgb(var(--paper-shadow) / <alpha-value>)',
         },
         ink: {
-          DEFAULT: '#203346',
-          soft: '#52646f',
-          faint: '#5f6f78',
+          DEFAULT: 'rgb(var(--ink) / <alpha-value>)',
+          soft: 'rgb(var(--ink-soft) / <alpha-value>)',
+          faint: 'rgb(var(--ink-faint) / <alpha-value>)',
         },
-        terracotta: '#b84b3d',
-        chalk: '#f4efe3',
-        desk: '#335a56',
-        'desk-dark': '#23443f',
+        terracotta: 'rgb(var(--terracotta) / <alpha-value>)',
+        chalk: 'rgb(var(--chalk) / <alpha-value>)',
+        desk: 'rgb(var(--desk) / <alpha-value>)',
+        'desk-dark': 'rgb(var(--desk-dark) / <alpha-value>)',
         mustard: {
-          DEFAULT: '#dfa93f',
-          ink: '#7b5a12',
+          DEFAULT: 'rgb(var(--mustard) / <alpha-value>)',
+          ink: 'rgb(var(--mustard-ink) / <alpha-value>)',
         },
-        teal: '#33796f',
-        rose: '#a94b5b',
-        sky: '#3d6f88',
-        leaf: '#3f7350',
+        teal: 'rgb(var(--teal) / <alpha-value>)',
+        rose: 'rgb(var(--rose) / <alpha-value>)',
+        sky: 'rgb(var(--sky) / <alpha-value>)',
+        leaf: 'rgb(var(--leaf) / <alpha-value>)',
+        surface: {
+          cream: 'rgb(var(--surface-cream) / <alpha-value>)',
+          mint: 'rgb(var(--surface-mint) / <alpha-value>)',
+          teal: 'rgb(var(--surface-teal) / <alpha-value>)',
+          blush: 'rgb(var(--surface-blush) / <alpha-value>)',
+        },
       },
       fontFamily: {
         bangla: ['"Hind Siliguri"', '"Noto Sans Bengali"', 'sans-serif'],

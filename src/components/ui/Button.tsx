@@ -16,16 +16,16 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variants: Record<Variant, string> = {
   primary:
-    'border-ink bg-ink text-paper-light shadow-[0_4px_0_#b84b3d] hover:bg-[#2b4359] hover:shadow-[0_5px_0_#b84b3d] active:shadow-[0_1px_0_#b84b3d] disabled:shadow-[0_3px_0_#a9937d]',
+    'border-ink bg-ink text-paper-light shadow-[0_4px_0_#b84b3d] hover:bg-ink/90 hover:shadow-[0_5px_0_#b84b3d] active:shadow-[0_1px_0_#b84b3d] disabled:shadow-[0_3px_0_#a9937d]',
   secondary:
-    'border-ink/20 bg-paper-light text-ink shadow-[0_3px_0_rgba(32,51,70,.16)] hover:border-ink/35 hover:bg-white active:shadow-none',
+    'border-ink/20 bg-paper-light text-ink shadow-[0_3px_0_rgba(32,51,70,.16)] hover:border-ink/35 hover:bg-paper active:shadow-none',
   accent:
-    'border-ink bg-mustard text-ink shadow-[0_4px_0_#203346] hover:bg-[#e7b651] active:shadow-[0_1px_0_#203346]',
+    'border-ink bg-mustard text-[#203346] shadow-[0_4px_0_#203346] hover:bg-mustard/90 active:shadow-[0_1px_0_#203346]',
   danger:
-    'border-terracotta bg-terracotta text-white shadow-[0_4px_0_#792d25] hover:bg-[#a64034] active:shadow-none',
+    'border-terracotta bg-terracotta text-white shadow-[0_4px_0_#792d25] hover:bg-terracotta/90 active:shadow-none',
   ghost: 'border-transparent bg-transparent text-ink hover:bg-ink/5',
   paper:
-    'border-ink/15 bg-[#fffdf6] text-ink shadow-[0_3px_0_rgba(32,51,70,.13)] hover:border-ink/30 active:shadow-none',
+    'border-ink/15 bg-paper-light text-ink shadow-[0_3px_0_rgba(32,51,70,.13)] hover:border-ink/30 hover:bg-paper active:shadow-none',
 };
 
 const sizes: Record<Size, string> = {

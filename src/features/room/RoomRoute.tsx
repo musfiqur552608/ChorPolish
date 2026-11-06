@@ -260,7 +260,7 @@ function ToasterLikeBanner({ connected, status, onRefresh }: ToasterLikeBannerPr
   const label = status === 'joined' ? t('room.disconnected') : t('room.reconnecting');
 
   return (
-    <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[90] flex items-center gap-2 rounded-full border-2 border-terracotta bg-terracotta px-3 py-1.5 text-xs font-semibold text-paper-light shadow-[0_4px_12px_rgba(184,75,61,.25)] animate-paper-float">
+    <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[90] flex items-center gap-2 rounded-full border-2 border-terracotta bg-terracotta px-3 py-1.5 text-xs font-semibold text-white shadow-[0_4px_12px_rgba(184,75,61,.25)] animate-paper-float">
       <PhoneOff className="h-3.5 w-3.5 shrink-0" aria-hidden />
       <span>{label}</span>
       {status === 'joined' && !connected && (

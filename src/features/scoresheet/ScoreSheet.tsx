@@ -108,7 +108,7 @@ export function ScoreSheet({
               {localizeNumber(completed, language)} / {localizeNumber(totalRounds, language)}
             </span>
             {leaders.length > 0 && (
-              <span className="inline-flex max-w-[155px] items-center gap-1 truncate font-hand text-base font-bold leading-tight text-[#86600d]">
+              <span className="inline-flex max-w-[155px] items-center gap-1 truncate font-hand text-base font-bold leading-tight text-mustard-ink">
                 <Crown className="h-3.5 w-3.5 shrink-0 text-mustard" aria-hidden />
                 <span className="truncate">{language === 'bn' ? 'এগিয়ে: ' : 'Leading: '}{leaderNames.join(' & ')}</span>
               </span>
@@ -228,7 +228,7 @@ export function ScoreSheet({
                               </span>
                               <span
                                 className={cn(
-                                  'font-hand font-bold leading-none tracking-wide text-[#203a58]',
+                                  'font-hand font-bold leading-none tracking-wide text-ink',
                                   dense ? 'text-[15px]' : 'text-[18px] sm:text-[20px]',
                                 )}
                                 style={{

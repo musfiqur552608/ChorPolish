@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Modal } from '@/components/ui/Modal';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { ThemePicker } from '@/components/ui/ThemePicker';
 import { RoleBadge, RoleSlip } from '@/components/roles/RoleSlip';
 import { AvatarPicker } from '@/components/ui/AvatarPicker';
 import { GAME_CONFIG } from '@/config/game';
@@ -392,7 +393,7 @@ export function GameTable({ session }: GameTableProps) {
   const renderMySlipCard = () => {
     if (!myRole) return null;
     return (
-      <div className="paper mx-auto flex w-full max-w-sm flex-col items-center gap-2 rounded-[12px] border border-mustard/40 bg-[#fff8e6] p-5 text-center shadow-paper">
+      <div className="paper mx-auto flex w-full max-w-sm flex-col items-center gap-2 rounded-[12px] border border-mustard/40 bg-surface-cream p-5 text-center shadow-paper">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-faint">
           {t('game.yourSlip')}
         </p>
@@ -456,12 +457,12 @@ export function GameTable({ session }: GameTableProps) {
               aria-label={t('game.tapToPeek')}
             />
             {taken && (
-              <span className="absolute inset-0 flex items-center justify-center rounded-[8px] bg-ink/55 backdrop-blur text-[10px] font-bold text-paper-light">
+              <span className="absolute inset-0 flex items-center justify-center rounded-[8px] bg-black/55 backdrop-blur text-[10px] font-bold text-white">
                 ✔
               </span>
             )}
             {canPickThis && (
-              <span className="absolute top-1 left-1/2 -translate-x-1/2 flex h-5 w-5 items-center justify-center rounded-full border border-mustard bg-mustard text-[9px] font-bold text-ink shadow-sm">
+              <span className="absolute top-1 left-1/2 -translate-x-1/2 flex h-5 w-5 items-center justify-center rounded-full border border-mustard bg-mustard text-[9px] font-bold text-[#203346] shadow-sm">
                 {localizeNumber(slot + 1, language)}
               </span>
             )}
@@ -477,7 +478,7 @@ export function GameTable({ session }: GameTableProps) {
     const expired = seconds <= 0;
 
     return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink/40 backdrop-blur-sm">
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -600,7 +601,7 @@ export function GameTable({ session }: GameTableProps) {
                 className={cn(
                   'flex min-w-0 flex-col items-center gap-1 rounded-lg border px-2 py-2 text-center',
                   role === 'BABU'
-                    ? 'border-mustard bg-[#fff8e6]'
+                    ? 'border-mustard bg-surface-cream'
                     : 'border-ink/10 bg-paper-light',
                 )}
               >
@@ -677,7 +678,7 @@ export function GameTable({ session }: GameTableProps) {
                 className={cn(
                   'flex min-w-0 flex-col items-center gap-1 rounded-lg border px-2 py-2 text-center',
                   role === 'POLICE'
-                    ? 'border-teal bg-[#eef8f6]'
+                    ? 'border-teal bg-surface-teal'
                     : 'border-ink/10 bg-paper-light',
                 )}
               >
@@ -700,7 +701,7 @@ export function GameTable({ session }: GameTableProps) {
       <section className="space-y-4">
         <div className={cn(
           'paper flex items-center gap-3 rounded-[12px] border p-4 shadow-sm',
-          policePlayer ? 'border-teal/40 bg-[#eef8f6]' : 'border-ink/10',
+          policePlayer ? 'border-teal/40 bg-surface-teal' : 'border-ink/10',
         )}>
           <RoleSlip role="POLICE" size="sm" showBrand={false} />
           <div className="min-w-0 flex-1">
@@ -734,7 +735,7 @@ export function GameTable({ session }: GameTableProps) {
                 className={cn(
                   'relative flex flex-col items-center gap-2 rounded-[12px] border-2 p-5 shadow-sm transition-all',
                   pickedThis
-                    ? 'border-leaf bg-[#f2fbf6]'
+                    ? 'border-leaf bg-surface-mint'
                     : canPick
                       ? 'border-ink/10 bg-paper-light hover:-translate-y-0.5 hover:border-mustard'
                       : 'border-ink/10 bg-paper-light',
@@ -778,7 +779,7 @@ export function GameTable({ session }: GameTableProps) {
       <section className="space-y-4">
         <div className={cn(
           'paper rounded-[12px] border-2 p-5 text-center shadow-paper',
-          caught ? 'border-leaf bg-[#f2fbf6]' : 'border-terracotta bg-[#fff3ef]',
+          caught ? 'border-leaf bg-surface-mint' : 'border-terracotta bg-surface-blush',
         )}>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-faint">
             {t('game.policePickTag')}
@@ -802,7 +803,7 @@ export function GameTable({ session }: GameTableProps) {
                 key={player.id}
                 className={cn(
                   'relative flex flex-col items-center gap-1.5 rounded-[12px] border-2 p-4 text-center shadow-sm',
-                  picked ? 'border-mustard bg-[#fff8e6]' : 'border-ink/10 bg-paper-light',
+                  picked ? 'border-mustard bg-surface-cream' : 'border-ink/10 bg-paper-light',
                 )}
               >
                 <span className="text-4xl" aria-hidden>{player.avatar}</span>
@@ -811,7 +812,7 @@ export function GameTable({ session }: GameTableProps) {
                 </span>
                 {role && <RoleBadge role={role} size="sm" />}
                 {picked && (
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#6a4a0d]">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-mustard-ink">
                     {t('game.policePickTag')}
                   </span>
                 )}
@@ -884,7 +885,7 @@ export function GameTable({ session }: GameTableProps) {
       <section className="space-y-4">
         <div className={cn(
           'paper rounded-[10px] border-2 p-5 text-center shadow-paper flex flex-col items-center justify-center min-h-[220px]',
-          caught ? 'border-leaf bg-[#f2fbf6]' : 'border-terracotta bg-[#fff3ef]',
+          caught ? 'border-leaf bg-surface-mint' : 'border-terracotta bg-surface-blush',
         )}>
           <span className="text-4xl mb-2">{caught ? '🪢' : '💨'}</span>
           <h3 className="font-display text-lg font-bold text-ink">
@@ -992,7 +993,7 @@ export function GameTable({ session }: GameTableProps) {
     return (
       <section className="space-y-5">
         {abandoned && (
-          <div className="paper rounded-[12px] border-2 border-terracotta/30 bg-[#fff3ef] p-4 text-center shadow-paper">
+          <div className="paper rounded-[12px] border-2 border-terracotta/30 bg-surface-blush p-4 text-center shadow-paper">
             <p className="text-sm font-semibold text-terracotta">{t('result.abandonedBanner')}</p>
             {!noRounds && (
               <p className="mt-1 text-[12px] leading-snug text-ink-soft">{t('result.partialNote')}</p>
@@ -1008,7 +1009,7 @@ export function GameTable({ session }: GameTableProps) {
         )}
 
         {!abandoned && cleanupSeconds !== null && (
-          <p className="rounded-lg border border-terracotta/20 bg-[#fff3ef] px-3 py-2 text-center text-[12px] font-medium leading-snug text-terracotta">
+          <p className="rounded-lg border border-terracotta/20 bg-surface-blush px-3 py-2 text-center text-[12px] font-medium leading-snug text-terracotta">
             {cleanupSeconds > 0
               ? t('result.cleanupWarning', { seconds: cleanupSeconds })
               : t('result.cleanupSoon')}
@@ -1022,7 +1023,7 @@ export function GameTable({ session }: GameTableProps) {
           </div>
         ) : (
           <>
-            <div className="paper rounded-[12px] border-2 border-mustard bg-[#fff8e6] p-6 text-center shadow-paper">
+            <div className="paper rounded-[12px] border-2 border-mustard bg-surface-cream p-6 text-center shadow-paper">
               {isShared ? (
                 <>
                   <h2 className="font-display text-2xl font-bold text-ink">{t('result.sharedTitle')}</h2>
@@ -1039,7 +1040,7 @@ export function GameTable({ session }: GameTableProps) {
               {winners.map((player) => (
                 <span
                   key={player.id}
-                  className="mt-3 inline-flex items-center gap-2 rounded-full border border-mustard bg-mustard px-3 py-1 text-xs font-bold text-[#6a4a0d]"
+                  className="mt-3 inline-flex items-center gap-2 rounded-full border border-mustard bg-mustard px-3 py-1 text-xs font-bold text-mustard-ink"
                 >
                   <Crown className="h-3.5 w-3.5" aria-hidden />
                   {t('result.winnerTag')}
@@ -1075,9 +1076,9 @@ export function GameTable({ session }: GameTableProps) {
                     className={cn(
                       'flex items-center justify-between gap-3 rounded-lg border px-3 py-2 transition-colors',
                       isWinner
-                        ? 'border-mustard bg-[#fff8e6]'
+                        ? 'border-mustard bg-surface-cream'
                         : isLast
-                          ? 'border-terracotta/30 bg-[#fff3ef]'
+                          ? 'border-terracotta/30 bg-surface-blush'
                           : 'border-ink/10 bg-paper-light',
                     )}
                   >
@@ -1218,6 +1219,7 @@ export function GameTable({ session }: GameTableProps) {
             {t('common.leave')}
           </button>
           <div className="flex items-center gap-2 text-right">
+            <ThemePicker />
             {canViewOwnSlip && (
               <button
                 type="button"

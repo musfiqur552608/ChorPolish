@@ -98,7 +98,7 @@ export function RoleSlip({
         'paper relative shrink-0 select-none border border-ink/10 text-left shadow-paper',
         styling.card,
         interactive && 'cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-mustard',
-        isHidden ? 'bg-[#f5ebd6]' : '',
+        isHidden ? 'bg-paper-deep' : '',
         className,
       )}
     >
@@ -114,7 +114,7 @@ export function RoleSlip({
         <span className="flex h-full w-full flex-col items-center justify-center gap-0.5 px-1">
           <span
             className={cn(
-              'font-hand font-bold text-ink/35',
+              'font-hand font-bold text-ink-faint',
               size === 'hero' ? 'text-6xl' : size === 'lg' ? 'text-5xl' : size === 'md' ? 'text-4xl' : 'text-2xl',
             )}
             aria-hidden

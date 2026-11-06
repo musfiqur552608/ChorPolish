@@ -113,7 +113,7 @@ export function Modal({
           transition={{ duration: 0.18 }}
         >
           <div
-            className="absolute inset-0 bg-ink/45 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
             onClick={onClose}
             aria-hidden
           />

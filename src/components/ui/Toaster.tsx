@@ -29,9 +29,9 @@ export function Toaster() {
               className={cn(
                 'pointer-events-auto flex w-full max-w-sm items-start gap-2.5 rounded-xl border-2 px-3.5 py-2.5 text-sm font-medium shadow-paper',
                 item.tone === 'error'
-                  ? 'border-terracotta/40 bg-[#fff3ef] text-[#7a2f27]'
+                  ? 'border-terracotta/40 bg-surface-blush text-terracotta'
                   : item.tone === 'success'
-                    ? 'border-teal/35 bg-[#f2fbf6] text-[#24564f]'
+                    ? 'border-teal/35 bg-surface-mint text-leaf'
                     : 'border-ink/15 bg-paper-light text-ink',
               )}
               initial={{ opacity: 0, y: -14, scale: 0.98 }}

@@ -22,6 +22,7 @@ import { AvatarPicker } from '@/components/ui/AvatarPicker';
 import { Button } from '@/components/ui/Button';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Modal } from '@/components/ui/Modal';
+import { ThemePicker } from '@/components/ui/ThemePicker';
 import { GAME_CONFIG } from '@/config/game';
 import { toast } from '@/hooks/useToastStore';
 import { cn } from '@/lib/cn';
@@ -209,7 +210,9 @@ export function LobbyView({
           </h1>
         </div>
 
-        <button
+        <div className="flex shrink-0 items-start gap-2">
+          <ThemePicker />
+          <button
           type="button"
           onClick={() => void copyCode()}
           className="group flex shrink-0 items-center gap-2.5 rounded-[10px] border-2 border-ink/15 bg-paper-light px-3 py-1.5 text-left shadow-[0_3px_0_rgba(32,51,70,.1)] transition-all hover:-translate-y-0.5 hover:border-ink/30"
@@ -226,7 +229,8 @@ export function LobbyView({
           ) : (
             <Copy className="h-4 w-4 text-ink-faint transition-colors group-hover:text-terracotta" aria-hidden />
           )}
-        </button>
+          </button>
+        </div>
       </header>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
@@ -278,7 +282,7 @@ export function LobbyView({
                   transition={{ duration: 0.22 }}
                   className={cn(
                     'relative flex min-h-[158px] flex-col items-center justify-center rounded-[12px] border-2 px-3 py-4 text-center shadow-paper transition-shadow hover:shadow-paper-lift',
-                    isMe ? 'border-mustard/70 bg-[#fffaec]' : 'border-ink/10 bg-paper-light',
+                    isMe ? 'border-mustard/70 bg-surface-cream' : 'border-ink/10 bg-paper-light',
                     !online && 'bg-paper-deep/30',
                   )}
                 >
@@ -324,7 +328,7 @@ export function LobbyView({
                       </span>
                     )}
                     {player.isHost && (
-                      <span className="rounded-sm bg-mustard/40 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#6a4a0d]">
+                      <span className="rounded-sm bg-mustard/40 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-mustard-ink">
                         {t('common.host')}
                       </span>
                     )}

@@ -21,7 +21,7 @@ export function LoadingScreen({ title, subtitle, fullScreen = true, dark = false
       className={cn(
         'grid place-items-center px-5',
         fullScreen ? 'fullscreen-fallback' : 'py-20',
-        dark ? 'text-paper-light' : 'text-ink',
+        dark ? 'text-[#f8f1df]' : 'text-ink',
       )}
       role="status"
       aria-live="polite"
@@ -57,9 +57,9 @@ export function LoadingScreen({ title, subtitle, fullScreen = true, dark = false
             transition={{ duration: 2.4, repeat: Infinity }}
           />
         </div>
-        <h2 className={cn('font-display text-xl font-bold', dark ? 'text-paper-light' : 'text-ink')}>{title}</h2>
+        <h2 className={cn('font-display text-xl font-bold', dark ? 'desk-label' : 'text-ink')}>{title}</h2>
         {subtitle && (
-          <p className={cn('mt-1.5 max-w-xs text-sm', dark ? 'text-paper/85' : 'text-ink-soft')}>{subtitle}</p>
+          <p className={cn('mt-1.5 max-w-xs text-sm', dark ? 'desk-label-soft' : 'text-ink-soft')}>{subtitle}</p>
         )}
       </div>
     </div>

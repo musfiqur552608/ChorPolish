@@ -3,6 +3,7 @@ import { Accessibility, Volume2, VolumeX } from 'lucide-react';
 import { useSettingsStore } from '@/hooks/useSettingsStore';
 import { sound } from '@/lib/sound';
 import { cn } from '@/lib/cn';
+import { ThemePicker } from './ThemePicker';
 
 interface PreferenceButtonsProps {
   inverted?: boolean;
@@ -27,6 +28,7 @@ export function PreferenceButtons({ inverted = false, className }: PreferenceBut
 
   return (
     <div className={cn('flex items-center gap-1', className)}>
+      <ThemePicker inverted={inverted} />
       <button
         type="button"
         className={cn(base, 'px-2.5 tracking-wide sm:px-3')}

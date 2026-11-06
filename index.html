@@ -4,6 +4,26 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#f8f1df" />
+    <script>
+      // Apply the saved appearance before first paint to avoid a light flash.
+      try {
+        var raw = localStorage.getItem('chorpolice.settings');
+        var parsed = raw ? JSON.parse(raw) : {};
+        var settings = parsed.state || parsed || {};
+        var theme = settings.theme || 'light';
+        var isDark =
+          theme === 'dark' ||
+          (theme === 'system' &&
+            window.matchMedia &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches);
+        var root = document.documentElement;
+        root.classList.toggle('dark', isDark);
+        root.style.colorScheme = isDark ? 'dark' : 'light';
+        root.dataset.paper = settings.paperPreset || 'cream';
+      } catch (error) {
+        /* appearance stays at the light default */
+      }
+    </script>
     <meta
       name="description"
       content="চোর পুলিশ — বন্ধুদের সাথে খেলা শৈশবের কাগজের খেলা। Chor Police, the classic Bangladeshi childhood paper game, reimagined for four friends."

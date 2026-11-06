@@ -148,7 +148,7 @@ export function LandingPage() {
               setHowToOpen(true);
               sound.play('flip');
             }}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-ink/10 px-3 text-xs font-semibold text-ink-soft transition-colors hover:bg-ink/5 hover:text-ink sm:px-3.5 sm:text-sm"
+            className="hidden h-9 items-center gap-1.5 rounded-full border border-ink/10 px-3 text-xs font-semibold text-ink-soft transition-colors hover:bg-ink/5 hover:text-ink sm:inline-flex sm:px-3.5 sm:text-sm"
           >
             <BookOpen className="h-4 w-4" aria-hidden />
             <span className="hidden sm:inline">{t('common.howToPlay')}</span>
@@ -183,7 +183,7 @@ export function LandingPage() {
                   {t('landing.headlineA')}
                   <span className="absolute -bottom-1 left-1 h-3 w-16 -rotate-2 rounded-full bg-terracotta/25 blur-[1px] sm:h-4 sm:w-24" />
                 </span>{' '}
-                <span className="relative inline-block rotate-1 text-[#284b5b]">
+                <span className="relative inline-block rotate-1 text-sky">
                   {t('landing.headlineB')}
                   <CircleScribble className="absolute -bottom-8 left-1/2 h-20 w-52 -translate-x-1/2 rotate-[-2deg] text-terracotta/45 sm:-bottom-10 sm:w-64" />
                 </span>
@@ -473,7 +473,7 @@ export function LandingPage() {
                   )}
 
                   {!isSupabaseConfigured && (
-                    <p className="mt-3 break-words rounded-lg border border-dashed border-mustard/60 bg-mustard/[0.08] px-3 py-2 text-[12px] leading-snug text-[#795713] [overflow-wrap:anywhere]">
+                    <p className="mt-3 break-words rounded-lg border border-dashed border-mustard/60 bg-mustard/[0.08] px-3 py-2 text-[12px] leading-snug text-mustard-ink [overflow-wrap:anywhere]">
                       {t('landing.setupTitle')} — {t('landing.setupBody')}
                     </p>
                   )}
@@ -552,7 +552,7 @@ export function LandingPage() {
             </div>
 
             <div className="relative min-w-0">
-              <div className="absolute -left-3 -top-5 z-10 rotate-[-4deg] rounded-sm border border-ink/10 bg-mustard/80 px-2.5 py-1 font-hand text-sm font-bold text-ink shadow-sm sm:-left-5">
+              <div className="absolute -left-3 -top-5 z-10 rotate-[-4deg] rounded-sm border border-ink/10 bg-mustard/90 px-2.5 py-1 font-hand text-sm font-bold text-[#203346] shadow-sm sm:-left-5">
                 {i18n.language === 'bn' ? 'নমুনা খাতা ✎' : 'A sample sheet ✎'}
               </div>
               <ScoreSheet
@@ -592,21 +592,21 @@ export function LandingPage() {
                 title: t('landing.featureSeats'),
                 body: t('landing.featureSeatsSub'),
                 rotate: '-.6deg',
-                tint: 'bg-[#f3ead4]',
+                tint: 'bg-surface-cream',
               },
               {
                 icon: Sparkles,
                 title: t('landing.featureLive'),
                 body: t('landing.featureLiveSub'),
                 rotate: '.5deg',
-                tint: 'bg-[#e9f1ec]',
+                tint: 'bg-surface-mint',
               },
               {
                 icon: LockKeyhole,
                 title: t('landing.featureSecret'),
                 body: t('landing.featureSecretSub'),
                 rotate: '-.3deg',
-                tint: 'bg-[#f6e6e1]',
+                tint: 'bg-surface-blush',
               },
             ].map(({ icon: Icon, title, body, tint }, index) => (
               <article
