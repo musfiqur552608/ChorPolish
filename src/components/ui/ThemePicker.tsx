@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Check, Moon, Palette, Sun, Monitor, RotateCcw } from 'lucide-react';
+import { Moon, Monitor, Sun } from 'lucide-react';
 import { useSettingsStore } from '@/hooks/useSettingsStore';
-import { PAPER_PRESETS, normalizeHex, type ThemeMode } from '@/lib/theme';
+import type { ThemeMode } from '@/lib/theme';
 import { sound } from '@/lib/sound';
 import { cn } from '@/lib/cn';
 
@@ -22,12 +22,8 @@ interface ThemePickerProps {
 export function ThemePicker({ inverted = false, className, align = 'end' }: ThemePickerProps) {
   const { t } = useTranslation();
   const theme = useSettingsStore((state) => state.theme);
-  const paperPreset = useSettingsStore((state) => state.paperPreset);
-  const paperColor = useSettingsStore((state) => state.paperColor);
   const setTheme = useSettingsStore((state) => state.setTheme);
-  const setPaperPreset = useSettingsStore((state) => state.setPaperPreset);
-  const setCustomPaper = useSettingsStore((state) => state.setCustomPaper);
-  const resetPaper = useSettingsStore((state) => state.resetPaper);
+  const isDark = theme === 'dark';
 
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -50,6 +46,8 @@ export function ThemePicker({ inverted = false, className, align = 'end' }: Them
     };
   }, [open]);
 
+  const ModeIcon = isDark ? Moon : Sun;
+
   const base = cn(
     'inline-flex h-9 w-9 items-center justify-center rounded-full border text-xs font-bold transition-all active:scale-95',
     inverted
@@ -71,7 +69,7 @@ export function ThemePicker({ inverted = false, className, align = 'end' }: Them
         aria-label={t('common.appearance')}
         title={t('common.appearance')}
       >
-        <Palette className="h-4 w-4" aria-hidden />
+        <ModeIcon className="h-4 w-4" aria-hidden />
       </button>
 
       <AnimatePresence>
@@ -84,8 +82,8 @@ export function ThemePicker({ inverted = false, className, align = 'end' }: Them
             exit={{ opacity: 0, y: 4, scale: 0.98 }}
             transition={{ duration: 0.16, ease: 'easeOut' }}
             className={cn(
-              'paper scrollbar-paper fixed inset-x-4 top-16 z-[70] max-h-[82vh] overflow-y-auto rounded-2xl border border-ink/10 p-4 shadow-paper-lift',
-              'sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+8px)] sm:w-[300px] sm:max-h-none',
+              'premium-glass scrollbar-paper fixed inset-x-4 top-16 z-[70] max-h-[82vh] overflow-y-auto rounded-2xl border border-ink/10 p-4 shadow-paper-lift',
+              'sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+8px)] sm:w-[280px] sm:max-h-none',
               align === 'start' && 'sm:left-0 sm:right-auto',
             )}
           >
@@ -106,7 +104,7 @@ export function ThemePicker({ inverted = false, className, align = 'end' }: Them
                     aria-checked={selected}
                     onClick={() => {
                       setTheme(mode.id);
-                      sound.play('click');
+                      sound.play(mode.id === 'dark' ? 'peek' : 'click');
                     }}
                     className={cn(
                       'flex flex-col items-center gap-1 rounded-lg px-1 py-2 text-[11px] font-bold transition-all',
@@ -121,104 +119,13 @@ export function ThemePicker({ inverted = false, className, align = 'end' }: Them
                 );
               })}
             </div>
-
-            <p className="mt-4 text-sm font-bold text-ink">{t('common.paperColor')}</p>
-            <div className="mt-2 grid grid-cols-7 gap-1.5" role="radiogroup" aria-label={t('common.paperColor')}>
-              {PAPER_PRESETS.map((preset) => {
-                const selected = paperPreset === preset.id;
-                return (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    onClick={() => {
-                      setPaperPreset(preset.id);
-                      sound.play('click');
-                    }}
-                    className={cn(
-                      'flex flex-col items-center gap-1 rounded-lg px-0.5 py-1.5 text-[10px] leading-tight transition-all',
-                      selected ? 'bg-paper-light text-ink shadow-sm ring-1 ring-ink/20' : 'text-ink-soft hover:text-ink',
-                    )}
-                  >
-                    <span
-                      className="relative grid h-8 w-8 place-items-center rounded-full border border-ink/15 shadow-sm"
-                      style={{ backgroundColor: preset.color }}
-                      aria-hidden
-                    >
-                      {selected && <Check className="h-4 w-4 text-[#203346]" aria-hidden />}
-                    </span>
-                    <span className="max-w-full truncate">{preset.labelBn}</span>
-                  </button>
-                );
-              })}
-              <button
-                type="button"
-                role="radio"
-                aria-checked={paperPreset === 'custom'}
-                onClick={() => {
-                  setCustomPaper(paperColor);
-                  sound.play('click');
-                }}
-                className={cn(
-                  'flex flex-col items-center gap-1 rounded-lg px-0.5 py-1.5 text-[10px] leading-tight transition-all',
-                  paperPreset === 'custom'
-                    ? 'bg-paper-light text-ink shadow-sm ring-1 ring-ink/20'
-                    : 'text-ink-soft hover:text-ink',
-                )}
-              >
-                <span
-                  className="relative grid h-8 w-8 place-items-center overflow-hidden rounded-full border border-ink/15 shadow-sm"
-                  aria-hidden
-                >
-                  <span
-                    className="absolute inset-0"
-                    style={{
-                      background:
-                        'linear-gradient(135deg,#f8d7da 0%,#f7e3ab 25%,#c9e7d0 50%,#dbeaf0 75%,#e2dfeb 100%)',
-                    }}
-                  />
-                  <span className="relative grid h-6 w-6 place-items-center rounded-full bg-black/25 text-white">
-                    <Palette className="h-3.5 w-3.5" aria-hidden />
-                  </span>
-                </span>
-                <span className="max-w-full truncate">{t('common.customPaper')}</span>
-              </button>
-            </div>
-
             <div className="mt-3 flex items-center gap-2">
-              <label
-                className={cn(
-                  'relative flex h-11 flex-1 cursor-pointer items-center gap-2 overflow-hidden rounded-xl border-2 border-dashed px-3 text-sm font-bold text-ink',
-                  paperPreset === 'custom' ? 'border-ink/40 bg-paper-light' : 'border-ink/20 bg-paper-deep/20',
-                )}
-                title={t('common.customPaper')}
-              >
-                <input
-                  type="color"
-                  value={normalizeHex(paperColor)}
-                  onChange={(event) => setCustomPaper(event.target.value)}
-                  onClick={() => sound.play('click')}
-                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                  aria-label={t('common.customPaper')}
-                />
-                <span
-                  className="h-5 w-5 shrink-0 rounded-full border border-ink/20 shadow-sm"
-                  style={{ backgroundColor: normalizeHex(paperColor) }}
-                  aria-hidden
-                />
-                <span className="font-mono text-xs uppercase tracking-wider">{normalizeHex(paperColor)}</span>
-              </label>
               <button
                 type="button"
-                onClick={() => {
-                  resetPaper();
-                  sound.play('flip');
-                }}
-                className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-ink/15 px-3 text-xs font-bold text-ink-soft transition-all hover:bg-ink/5 hover:text-ink"
+                onClick={() => sound.play('sparkle')}
+                className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl border border-ink/15 bg-paper-light px-3 text-xs font-bold text-ink-soft transition-all hover:bg-ink/5 hover:text-ink"
               >
-                <RotateCcw className="h-3.5 w-3.5" aria-hidden />
-                {t('common.resetPaper')}
+                🔊 {t('common.sound')}
               </button>
             </div>
           </motion.div>

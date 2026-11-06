@@ -102,7 +102,7 @@ export function GameTable({ session }: GameTableProps) {
     phaseCueRef.current = cue;
     switch (round.phase) {
       case 'SHUFFLE':
-        sound.play('shuffle');
+        sound.play('whoosh');
         break;
       case 'DRAW':
         sound.play('flip');
@@ -114,10 +114,10 @@ export function GameTable({ session }: GameTableProps) {
         sound.play('peek');
         break;
       case 'POLICE_REVEAL':
-        sound.play('click');
+        sound.play('lock');
         break;
       case 'BABU_ORDER':
-        sound.play('write');
+        sound.play('dramatic');
         break;
       case 'POLICE_GUESS':
         sound.play('gavel');
@@ -126,13 +126,13 @@ export function GameTable({ session }: GameTableProps) {
         sound.play(round.guessCorrect ? 'cheer' : 'oops');
         break;
       case 'ROUND_RESULT':
-        sound.play('write');
+        sound.play('success');
         break;
       case 'MATCH_END': {
         const topScore = players.reduce((max, player) => Math.max(max, player.totalScore), 0);
         const myScore = mePlayer?.totalScore ?? 0;
         const hasScores = players.some((player) => player.totalScore > 0);
-        sound.play(hasScores && myScore >= topScore ? 'win' : 'cheer');
+        sound.play(hasScores && myScore >= topScore ? 'podium' : 'cheer');
         break;
       }
       default:
@@ -1207,7 +1207,9 @@ export function GameTable({ session }: GameTableProps) {
 
   return (
     <main className="game-desk fullscreen-fallback relative min-h-screen">
-      <header className="relative z-20 sticky top-0 z-[40] border-b border-ink/10 bg-paper-light/95 backdrop-blur-[4px] px-4 py-3 sm:px-6">
+      <div className="ambient-glow -left-24 top-24 h-72 w-72 bg-mustard/20" aria-hidden />
+      <div className="ambient-glow -right-24 top-64 h-80 w-80 bg-teal/20" aria-hidden />
+      <header className="premium-glass relative z-20 sticky top-0 z-[40] border-b border-ink/10 px-4 py-3 sm:px-6">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-2">
           <button
             type="button"

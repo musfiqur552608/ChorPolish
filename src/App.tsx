@@ -13,8 +13,6 @@ export default function App() {
   const reduceMotion = useSettingsStore((state) => state.reduceMotion);
   const language = useSettingsStore((state) => state.language);
   const theme = useSettingsStore((state) => state.theme);
-  const paperPreset = useSettingsStore((state) => state.paperPreset);
-  const paperColor = useSettingsStore((state) => state.paperColor);
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -26,8 +24,6 @@ export default function App() {
     const apply = () =>
       applyTheme({
         theme,
-        paperPreset,
-        paperColor,
         isDark: resolveIsDark(theme),
       });
     apply();
@@ -35,7 +31,7 @@ export default function App() {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     media.addEventListener('change', apply);
     return () => media.removeEventListener('change', apply);
-  }, [theme, paperPreset, paperColor]);
+  }, [theme]);
 
   return (
     <MotionConfig reducedMotion={reduceMotion ? 'always' : 'user'}>

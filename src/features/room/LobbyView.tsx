@@ -127,7 +127,9 @@ export function LobbyView({
     const ok = await copyText(code);
     if (ok) {
       setCopied('code');
-      playClick();
+      sound.play('coin');
+      window.setTimeout(() => sound.play('sparkle'), 70);
+      haptics.tap();
     } else {
       sound.play('oops');
       haptics.error();
@@ -139,7 +141,9 @@ export function LobbyView({
     const ok = await copyText(url);
     if (ok) {
       setCopied('link');
-      playClick();
+      sound.play('coin');
+      window.setTimeout(() => sound.play('sparkle'), 70);
+      haptics.tap();
     } else {
       sound.play('oops');
       haptics.error();

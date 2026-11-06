@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -76,7 +76,7 @@ export function LandingPage() {
     if (next === tab) return;
     setTab(next);
     setError(null);
-    sound.play('click');
+    sound.play('whoosh');
     haptics.tap();
   }
 
@@ -115,7 +115,8 @@ export function LandingPage() {
           : await joinRoom({ code, name: name.trim(), avatar });
       saveProfileDraft({ name: name.trim(), avatar });
       saveRecentRoom(result.code);
-      sound.play(tab === 'create' ? 'join' : 'flip');
+      sound.play(tab === 'create' ? 'success' : 'coin');
+      window.setTimeout(() => sound.play('sparkle'), tab === 'create' ? 120 : 0);
       haptics.caught();
       navigate(`/room/${result.code}`);
     } catch (cause) {
@@ -138,6 +139,8 @@ export function LandingPage() {
             'radial-gradient(ellipse at 8% 4%, rgba(223,169,63,.15), transparent 34%), radial-gradient(ellipse at 92% 10%, rgba(51,121,111,.1), transparent 33%), repeating-linear-gradient(90deg, transparent 0, transparent 79px, rgba(184,75,61,.055) 79px, rgba(184,75,61,.055) 80px)',
         }}
       />
+      <div className="ambient-glow -left-24 -top-24 h-72 w-72 bg-mustard/30" aria-hidden />
+      <div className="ambient-glow -right-20 top-40 h-80 w-80 bg-teal/25" aria-hidden />
 
       <header className="relative z-20 mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-5 pt-safe sm:px-7 sm:py-6">
         <Logo />
@@ -161,7 +164,7 @@ export function LandingPage() {
         <section className="relative mx-auto grid max-w-6xl gap-12 px-5 pb-16 pt-8 sm:px-7 sm:pt-12 lg:grid-cols-[1.05fr_.95fr] lg:gap-10 lg:pb-24 lg:pt-10">
           <div className="relative flex flex-col justify-center text-center lg:text-left">
             <div className="mb-5 flex justify-center lg:justify-start">
-              <span className="relative inline-flex rotate-[-1deg] items-center gap-2 border border-ink/10 bg-paper-light/75 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.13em] text-ink-soft shadow-[0_2px_0_rgba(32,51,70,.07)] sm:text-xs">
+              <span className="premium-badge relative inline-flex rotate-[-1deg] items-center gap-2 rounded-full border border-ink/10 bg-paper-light/75 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.13em] text-ink-soft shadow-[0_2px_0_rgba(32,51,70,.07)] sm:text-xs">
                 <Sparkle className="h-3.5 w-3.5 text-mustard" />
                 {t('landing.eyebrow')}
                 <span className="absolute -right-1.5 -top-1.5 h-3 w-3 rotate-12 bg-mustard/50" aria-hidden />
@@ -175,6 +178,16 @@ export function LandingPage() {
               <div className="pointer-events-none absolute -right-2 top-5 hidden h-8 w-8 rotate-12 text-terracotta/60 lg:block">
                 <Sparkle className="h-full w-full" />
               </div>
+              <div className="pointer-events-none absolute -left-16 top-24 hidden lg:block">
+                <div className="premium-float" style={{ '--float-rot': '-8deg' } as CSSProperties}>
+                  <RoleSlip role="BABU" size="sm" className="shadow-paper-lift" />
+                </div>
+              </div>
+              <div className="pointer-events-none absolute -right-14 top-28 hidden lg:block">
+                <div className="premium-float-slow" style={{ '--float-rot': '6deg' } as CSSProperties}>
+                  <RoleSlip role="POLICE" size="sm" className="shadow-paper-lift" />
+                </div>
+              </div>
               <h1
                 aria-label={t('common.appName')}
                 className="relative inline-block max-w-full font-bangla text-[clamp(3.45rem,15.5vw,8.2rem)] font-bold leading-[0.84] tracking-[-0.055em] text-ink"
@@ -183,7 +196,7 @@ export function LandingPage() {
                   {t('landing.headlineA')}
                   <span className="absolute -bottom-1 left-1 h-3 w-16 -rotate-2 rounded-full bg-terracotta/25 blur-[1px] sm:h-4 sm:w-24" />
                 </span>{' '}
-                <span className="relative inline-block rotate-1 text-sky">
+                <span className="gold-text relative inline-block rotate-1">
                   {t('landing.headlineB')}
                   <CircleScribble className="absolute -bottom-8 left-1/2 h-20 w-52 -translate-x-1/2 rotate-[-2deg] text-terracotta/45 sm:-bottom-10 sm:w-64" />
                 </span>

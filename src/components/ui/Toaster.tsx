@@ -27,7 +27,7 @@ export function Toaster() {
               key={item.id}
               layout
               className={cn(
-                'pointer-events-auto flex w-full max-w-sm items-start gap-2.5 rounded-xl border-2 px-3.5 py-2.5 text-sm font-medium shadow-paper',
+                'premium-glass pointer-events-auto flex w-full max-w-sm items-start gap-2.5 rounded-xl border px-3.5 py-2.5 text-sm font-medium shadow-paper',
                 item.tone === 'error'
                   ? 'border-terracotta/40 bg-surface-blush text-terracotta'
                   : item.tone === 'success'
