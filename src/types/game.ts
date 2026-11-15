@@ -43,6 +43,8 @@ export interface PlayerPublic {
   avatar: string;
   seat: number;
   isHost: boolean;
+  /** Server-driven computer player. Bots have no auth user. */
+  isBot: boolean;
   isReady: boolean;
   isOnline: boolean;
   totalScore: number;
@@ -119,6 +121,8 @@ export interface PeekRoom {
   code: string;
   status: RoomStatus | null;
   playerCount: number;
+  /** Number of computer players seated in the room. */
+  botCount?: number;
   totalRounds: number | null;
   isMember: boolean;
   seatsOpen: number;
@@ -134,6 +138,8 @@ export type GameAction =
   | 'police_rise'
   | 'guess'
   | 'advance'
+  | 'fill_bots'
+  | 'remove_bot'
   | 'react'
   | 'leave'
   | 'change_avatar';

@@ -43,6 +43,28 @@ export async function joinRoom(input: {
   });
 }
 
+export async function createPracticeRoom(input: {
+  name: string;
+  avatar: string;
+  rounds: number;
+  requestId: string;
+}): Promise<{ code: string; roomId: string }> {
+  return rpc('create_practice_room', {
+    p_name: input.name.trim(),
+    p_avatar: input.avatar,
+    p_rounds: input.rounds,
+    p_request_id: input.requestId,
+  });
+}
+
+export async function fillBots(roomId: string): Promise<number> {
+  return rpc('fill_bots', { p_room_id: roomId });
+}
+
+export async function removeBot(roomId: string, playerId: string): Promise<void> {
+  await rpc('remove_bot', { p_room_id: roomId, p_player_id: playerId });
+}
+
 export async function peekRoom(code: string): Promise<PeekRoom> {
   return rpc('peek_room', { p_code: passCode(code) });
 }

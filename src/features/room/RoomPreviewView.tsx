@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, ArrowRight, LockKeyhole, UsersRound } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bot, LockKeyhole, UsersRound } from 'lucide-react';
 import { AvatarPicker } from '@/components/ui/AvatarPicker';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
@@ -38,7 +38,8 @@ export function RoomPreviewView({
 
   const seatsTaken = Math.max(peek.playerCount, 0);
   const seatsOpen = Math.max(peek.seatsOpen, 0);
-  const available = peek.exists && peek.status === 'lobby' && seatsOpen > 0 && seatsTaken < GAME_CONFIG.maxPlayers;
+  const botCount = Math.max(peek.botCount ?? 0, 0);
+  const available = peek.exists && peek.status === 'lobby' && seatsOpen > 0;
   const joining = busy === 'join';
 
   let blockedTitle = '';
@@ -52,7 +53,7 @@ export function RoomPreviewView({
   } else if (peek.status === 'finished') {
     blockedTitle = t('room.finishedTitle');
     blockedBody = t('room.finishedBody');
-  } else if (seatsOpen <= 0 || seatsTaken >= GAME_CONFIG.maxPlayers) {
+  } else if (seatsOpen <= 0) {
     blockedTitle = t('room.fullTitle');
     blockedBody = t('room.fullBody');
   }
@@ -130,6 +131,13 @@ export function RoomPreviewView({
             </p>
           </div>
         </div>
+
+        {botCount > 0 && (
+          <p className="mt-2 flex items-center justify-center gap-1.5 rounded-lg border border-teal/20 bg-surface-teal/55 px-2.5 py-1.5 text-center text-[11px] font-medium leading-snug text-ink-soft">
+            <Bot className="h-3.5 w-3.5 shrink-0 text-teal" aria-hidden />
+            {t('room.botsMakeRoom')}
+          </p>
+        )}
 
         {available ? (
           <form onSubmit={submit} className="mt-5 space-y-3.5" noValidate>

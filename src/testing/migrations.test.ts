@@ -21,6 +21,7 @@ const MANUAL = '20261024000400_manual_flow.sql';
 const CLEANUP = '20261024000500_scheduled_cleanup.sql';
 const END = '20261024000600_end_of_room_cleanup.sql';
 const LEAVE = '20261024000700_leave_ends_match.sql';
+const BOTS = '20261024000800_bots.sql';
 
 describe('migration set', () => {
   it('ships every required migration in order and no unsafe 003 draft', () => {
@@ -28,7 +29,7 @@ describe('migration set', () => {
       .filter((file) => file.endsWith('.sql'))
       .sort();
 
-    for (const file of [INIT, RPCS, MANUAL, CLEANUP, END, LEAVE]) {
+    for (const file of [INIT, RPCS, MANUAL, CLEANUP, END, LEAVE, BOTS]) {
       expect(files).toContain(file);
     }
     expect(files.indexOf(INIT)).toBeLessThan(files.indexOf(RPCS));
@@ -36,6 +37,7 @@ describe('migration set', () => {
     expect(files.indexOf(MANUAL)).toBeLessThan(files.indexOf(CLEANUP));
     expect(files.indexOf(CLEANUP)).toBeLessThan(files.indexOf(END));
     expect(files.indexOf(END)).toBeLessThan(files.indexOf(LEAVE));
+    expect(files.indexOf(LEAVE)).toBeLessThan(files.indexOf(BOTS));
     expect(existsSync(resolve(MIGRATIONS_DIR, '20261023000300_cleanup_migration.sql'))).toBe(false);
   });
 });
@@ -220,5 +222,83 @@ describe('leave ends match (007)', () => {
 
   it('keeps leave_room behind authenticated grants only', () => {
     expect(leaveCode).toMatch(/grant execute on function public\.leave_room\(uuid\) to authenticated;/i);
+  });
+});
+
+describe('computer players (008)', () => {
+  const bots = read(BOTS);
+  const botsCode = withoutComments(bots);
+
+  it('allows bot rows without auth users but keeps humans authenticated', () => {
+    expect(botsCode).toMatch(/alter table public\.players\s+alter column user_id drop not null;/);
+    expect(botsCode).toContain('add column if not exists is_bot boolean not null default false;');
+    expect(botsCode).toContain('players_bot_identity');
+    expect(botsCode).toContain('(is_bot and user_id is null)');
+    expect(botsCode).toContain('(not is_bot and user_id is not null)');
+  });
+
+  it('exposes isBot without widening the hidden-role window', () => {
+    expect(botsCode).toContain("'isBot', p.is_bot,");
+    expect(botsCode).toContain('v_round.babu_risen_at is not null');
+    expect(botsCode).toContain('v_round.police_risen_at is not null');
+    expect(botsCode).toContain("rr.role = 'BABU'");
+    expect(botsCode).toContain("rr.role = 'POLICE'");
+  });
+
+  it('keeps fill/remove host-only and lobby-only', () => {
+    expect(botsCode).toMatch(/create or replace function public\.fill_bots/);
+    expect(botsCode).toMatch(/create or replace function public\.remove_bot/);
+    expect(botsCode).toContain('if not public.is_room_host(p_room_id) then');
+    expect(botsCode).toContain("if v_room.status <> 'lobby' then");
+    expect(botsCode).toContain('delete from public.players where id = v_bot.id;');
+  });
+
+  it('starts a direct practice room with three computers', () => {
+    expect(botsCode).toMatch(/create or replace function public\.create_practice_room/);
+    expect(botsCode).toContain('perform public.fill_bots(v_room_id);');
+    expect(botsCode).toContain('perform public.start_game(v_room_id);');
+  });
+
+  it('lets a human replace a computer in a bot-filled lobby', () => {
+    expect(botsCode).toContain('where p.room_id = v_room.id and p.is_bot');
+    expect(botsCode).toContain('delete from public.players where id = v_bot_id;');
+    expect(botsCode).toContain("raise exception using message = 'ROOM_FULL';");
+  });
+
+  it('excludes computers from presence pauses and abandonment', () => {
+    expect(botsCode).toMatch(/and not is_bot\s+and user_id <> v_user/);
+    expect(botsCode).toMatch(/where room_id = p_room_id\s+and not is_bot\s+and not is_online/);
+    expect(botsCode).toContain("and not is_bot\n        and not is_online\n        and coalesce(disconnected_at, last_seen_at) < now() - interval '90 seconds'");
+  });
+
+  it('drives bot turns from short server deadlines', () => {
+    expect(botsCode).toMatch(/create or replace function public\.assign_slip/);
+    expect(botsCode).toContain('v_next_bot := public.player_is_bot(v_next_picker);');
+    expect(botsCode).toContain("when v_next_bot then interval '1300 milliseconds'");
+    expect(botsCode).toMatch(/elsif v_round\.phase = 'BABU_REVEAL' then/);
+    expect(botsCode).toMatch(/elsif v_round\.phase = 'POLICE_REVEAL' then/);
+    expect(botsCode).toMatch(/elsif v_round\.phase = 'POLICE_GUESS' then/);
+    expect(botsCode).toContain('perform public.assign_slip(v_round.id, v_auto_player, v_auto_slot);');
+    expect(botsCode).toContain(`interval '${GAME_CONFIG.botPacingMs.draw} milliseconds'`);
+    expect(botsCode).toContain(`interval '${GAME_CONFIG.botPacingMs.babuRise} milliseconds'`);
+    expect(botsCode).toContain(`interval '${GAME_CONFIG.botPacingMs.babuAsk} milliseconds'`);
+    expect(botsCode).toContain(`interval '${GAME_CONFIG.botPacingMs.policeRise} milliseconds'`);
+    expect(botsCode).toContain(`interval '${GAME_CONFIG.botPacingMs.policeGuess} milliseconds'`);
+    expect(botsCode).toContain(`interval '${GAME_CONFIG.botPacingMs.guessSuspense} milliseconds'`);
+  });
+
+  it('keeps internal helpers server-only and grants only public bot actions', () => {
+    expect(botsCode).toMatch(
+      /revoke all on function public\.player_is_bot\(uuid\) from public, anon, authenticated;/i,
+    );
+    expect(botsCode).toMatch(
+      /revoke all on function public\.build_room_state\(uuid, uuid\) from public, anon, authenticated;/i,
+    );
+    expect(botsCode).toMatch(/grant execute on function public\.fill_bots\(uuid\) to authenticated;/i);
+    expect(botsCode).toMatch(/grant execute on function public\.remove_bot\(uuid, uuid\) to authenticated;/i);
+    expect(botsCode).toMatch(
+      /grant execute on function public\.create_practice_room\(text, text, integer, uuid\) to authenticated;/i,
+    );
+    expect(botsCode).not.toMatch(/grant execute on function public\.build_room_state/i);
   });
 });

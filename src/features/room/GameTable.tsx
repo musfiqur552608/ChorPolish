@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft,
+  Bot,
   Check,
   Clock,
   Crown,
@@ -185,7 +186,7 @@ export function GameTable({ session }: GameTableProps) {
 
   // Grace countdown for paused player
   const pausedPlayer = players.find(
-    (player) => !player.isOnline && player.disconnectedAt,
+    (player) => !player.isBot && !player.isOnline && player.disconnectedAt,
   );
   const graceSecondsLeft = () => {
     if (!pausedPlayer?.disconnectedAt) return GAME_CONFIG.graceSeconds;
@@ -607,6 +608,12 @@ export function GameTable({ session }: GameTableProps) {
               >
                 <span className="text-xl" aria-hidden>{player.avatar}</span>
                 <span className="w-full truncate text-[10px] font-semibold text-ink">{player.name}</span>
+                {player.isBot && (
+                  <span className="inline-flex items-center gap-0.5 rounded-sm bg-teal/15 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-teal">
+                    <Bot className="h-2 w-2" aria-hidden />
+                    {t('common.computer')}
+                  </span>
+                )}
                 {role === 'BABU' && <RoleBadge role="BABU" size="sm" className="scale-90" />}
               </div>
             );
@@ -684,6 +691,12 @@ export function GameTable({ session }: GameTableProps) {
               >
                 <span className="text-xl" aria-hidden>{player.avatar}</span>
                 <span className="w-full truncate text-[10px] font-semibold text-ink">{player.name}</span>
+                {player.isBot && (
+                  <span className="inline-flex items-center gap-0.5 rounded-sm bg-teal/15 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-teal">
+                    <Bot className="h-2 w-2" aria-hidden />
+                    {t('common.computer')}
+                  </span>
+                )}
                 {role === 'POLICE' && <RoleBadge role="POLICE" size="sm" className="scale-90" />}
               </div>
             );
@@ -708,9 +721,17 @@ export function GameTable({ session }: GameTableProps) {
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-faint">
               {t('game.policeRisenTag')}
             </p>
-            <p className="truncate font-display text-lg font-bold text-ink">
-              {policePlayer?.name ?? t('game.spectator')}
-            </p>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <p className="truncate font-display text-lg font-bold text-ink">
+                {policePlayer?.name ?? t('game.spectator')}
+              </p>
+              {policePlayer?.isBot && (
+                <span className="inline-flex shrink-0 items-center gap-0.5 rounded-sm bg-teal/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-teal">
+                  <Bot className="h-2.5 w-2.5" aria-hidden />
+                  {t('common.computer')}
+                </span>
+              )}
+            </div>
             <p className="text-sm leading-snug text-ink-soft">
               {picked
                 ? t('game.policePicked', { name: picked.name })
@@ -746,6 +767,12 @@ export function GameTable({ session }: GameTableProps) {
                 <span className="max-w-full truncate font-display text-sm font-bold text-ink">
                   {player.name}
                 </span>
+                {player.isBot && (
+                  <span className="inline-flex items-center gap-0.5 rounded-sm bg-teal/15 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-teal">
+                    <Bot className="h-2 w-2" aria-hidden />
+                    {t('common.computer')}
+                  </span>
+                )}
                 {pickedThis && (
                   <span className="inline-flex items-center gap-1 rounded-full border border-leaf/30 bg-leaf/10 px-2 py-0.5 text-[10px] font-bold text-leaf">
                     <Check className="h-3 w-3" aria-hidden />
@@ -810,6 +837,12 @@ export function GameTable({ session }: GameTableProps) {
                 <span className="max-w-full truncate font-display text-sm font-bold text-ink">
                   {player.name}
                 </span>
+                {player.isBot && (
+                  <span className="inline-flex items-center gap-0.5 rounded-sm bg-teal/15 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-teal">
+                    <Bot className="h-2 w-2" aria-hidden />
+                    {t('common.computer')}
+                  </span>
+                )}
                 {role && <RoleBadge role={role} size="sm" />}
                 {picked && (
                   <span className="text-[10px] font-bold uppercase tracking-wider text-mustard-ink">
@@ -1083,16 +1116,27 @@ export function GameTable({ session }: GameTableProps) {
                           : 'border-ink/10 bg-paper-light',
                     )}
                   >
-                    <span className="flex items-center gap-2 text-[13px] font-bold">
-                      {place === 1
-                        ? '🥇'
-                        : place === 2
-                          ? '🥈'
-                          : place === 3
-                            ? '🥉'
-                            : localizeNumber(place, language)}
-                      {isWinner && <span className="text-xs text-mustard-ink">{t('result.winnerTag')}</span>}
-                      {isLast && <span className="text-xs text-terracotta">{t('result.loser')}</span>}
+                    <span className="flex min-w-0 items-center gap-2 text-[13px] font-bold">
+                      <span className="w-6 shrink-0 text-center">
+                        {place === 1
+                          ? '🥇'
+                          : place === 2
+                            ? '🥈'
+                            : place === 3
+                              ? '🥉'
+                              : localizeNumber(place, language)}
+                      </span>
+                      <span className="min-w-0 truncate font-display text-ink">
+                        {player.avatar} {player.name}
+                      </span>
+                      {player.isBot && (
+                        <span className="inline-flex shrink-0 items-center gap-0.5 rounded-sm bg-teal/15 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-teal">
+                          <Bot className="h-2 w-2" aria-hidden />
+                          {t('common.computer')}
+                        </span>
+                      )}
+                      {isWinner && <span className="hidden shrink-0 text-xs text-mustard-ink sm:inline">{t('result.winnerTag')}</span>}
+                      {isLast && <span className="hidden shrink-0 text-xs text-terracotta sm:inline">{t('result.loser')}</span>}
                     </span>
                     <div className="flex items-center gap-2 text-right">
                       <span className="font-mono text-[15px] font-bold text-ink">
@@ -1149,6 +1193,7 @@ export function GameTable({ session }: GameTableProps) {
               {shuffler && (
                 <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-ink/10 bg-paper-light px-3 py-1 text-xs font-semibold text-ink shadow-sm">
                   {shuffler.avatar} {shuffler.name}
+                  {shuffler.isBot ? ` · ${t('common.computer')}` : ''}
                 </span>
               )}
             </div>

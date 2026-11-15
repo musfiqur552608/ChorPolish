@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import {
   ArrowRight,
   BookOpen,
+  Bot,
   KeyRound,
   Link2,
   LockKeyhole,
@@ -33,7 +34,7 @@ import { loadProfileDraft, saveProfileDraft, saveRecentRoom } from '@/lib/profil
 import { isValidRoomCode, ROOM_CODE_LENGTH, sanitizeRoomCode } from '@/lib/roomCode';
 import { sound } from '@/lib/sound';
 import { createRequestId } from '@/lib/requestId';
-import { createRoom, joinRoom } from '@/lib/supabase/api';
+import { createRoom, createPracticeRoom, joinRoom } from '@/lib/supabase/api';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import type { Role } from '@/types';
 
@@ -58,9 +59,11 @@ export function LandingPage() {
   const [customRounds, setCustomRounds] = useState('6');
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [practiceLoading, setPracticeLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [howToOpen, setHowToOpen] = useState(false);
   const requestId = useRef<string>(createRequestId());
+  const practiceRequestId = useRef<string>(createRequestId());
 
   const rounds = roundChoice === 'custom' ? Number(customRounds) : roundChoice;
   const roundsValid =
@@ -126,6 +129,49 @@ export function LandingPage() {
       haptics.error();
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handlePractice() {
+    resetError();
+    if (!nameValid) {
+      setError(t('landing.nameRequired'));
+      sound.play('oops');
+      haptics.error();
+      return;
+    }
+    if (!roundsValid) {
+      setError(t('landing.roundsRequired'));
+      sound.play('oops');
+      haptics.error();
+      return;
+    }
+    if (!isSupabaseConfigured) {
+      setError(t('landing.setupBody'));
+      return;
+    }
+
+    setPracticeLoading(true);
+    try {
+      const result = await createPracticeRoom({
+        name: name.trim(),
+        avatar,
+        rounds,
+        requestId: practiceRequestId.current,
+      });
+      saveProfileDraft({ name: name.trim(), avatar });
+      saveRecentRoom(result.code);
+      sound.play('success');
+      window.setTimeout(() => sound.play('sparkle'), 120);
+      haptics.caught();
+      navigate(`/room/${result.code}`);
+    } catch (cause) {
+      setError(userErrorMessage(cause, t));
+      pushToast(userErrorMessage(cause, t), 'error');
+      sound.play('oops');
+      haptics.error();
+    } finally {
+      setPracticeLoading(false);
     }
   }
 
@@ -372,7 +418,7 @@ export function LandingPage() {
                         autoComplete="nickname"
                         maxLength={20}
                         leading={<span className="font-hand text-lg font-bold text-terracotta">Aa</span>}
-                        disabled={loading}
+                        disabled={loading || practiceLoading}
                       />
 
                       <AvatarPicker
@@ -382,7 +428,7 @@ export function LandingPage() {
                           setAvatar(value);
                           resetError();
                         }}
-                        disabled={loading}
+                        disabled={loading || practiceLoading}
                       />
 
                       {tab === 'create' && (
@@ -496,7 +542,7 @@ export function LandingPage() {
                     size="lg"
                     fullWidth
                     loading={loading}
-                    disabled={!isSupabaseConfigured}
+                    disabled={!isSupabaseConfigured || practiceLoading}
                     className="mt-4"
                     rightIcon={<ArrowRight className="h-4 w-4" aria-hidden />}
                   >
@@ -511,11 +557,40 @@ export function LandingPage() {
                     <span className="shrink-0 whitespace-nowrap font-hand text-sm text-terracotta">৪ / ৪</span>
                   </div>
                 </form>
+
+                <div className="mt-4 rounded-[9px] border-2 border-dashed border-teal/30 bg-surface-teal/55 p-3">
+                  <div className="flex items-start gap-2.5">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-teal/10 text-teal">
+                      <Bot className="h-4 w-4" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-display text-[15px] font-bold leading-snug text-ink">
+                        {t('landing.practiceTitle')}
+                      </p>
+                      <p className="mt-0.5 text-[11px] leading-snug text-ink-soft">
+                        {t('landing.practiceHint')}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="md"
+                    fullWidth
+                    className="mt-2.5"
+                    loading={practiceLoading}
+                    disabled={!isSupabaseConfigured || loading}
+                    onClick={() => void handlePractice()}
+                    leftIcon={<Bot className="h-4 w-4" aria-hidden />}
+                  >
+                    {t('landing.practiceButton')}
+                  </Button>
+                </div>
               </div>
             </div>
 
             <p className="mt-4 text-center font-hand text-base text-ink-faint">
-              {i18n.language === 'bn' ? 'বন্ধু ছাড়া খেলা জমে না।' : 'A game is no fun without friends.'}
+              {i18n.language === 'bn' ? 'বন্ধু থাকলে আরও জমবে—নইলে কম্পিউটার আছে।' : 'Better with friends. Computers are ready too.'}
             </p>
           </div>
         </section>

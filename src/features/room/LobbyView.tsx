@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
+  Bot,
   Check,
   Clock3,
   Copy,
@@ -17,6 +18,7 @@ import {
   Share2,
   UserPlus,
   WifiOff,
+  X,
 } from 'lucide-react';
 import { AvatarPicker } from '@/components/ui/AvatarPicker';
 import { Button } from '@/components/ui/Button';
@@ -41,6 +43,8 @@ interface LobbyViewProps {
   onReady: () => Promise<boolean>;
   onRounds: (rounds: number) => Promise<boolean>;
   onStart: () => Promise<boolean>;
+  onFillBots: () => Promise<boolean>;
+  onRemoveBot: (playerId: string) => Promise<boolean>;
   onAvatar: (avatar: string) => Promise<boolean>;
   onLeave: () => Promise<void>;
 }
@@ -55,6 +59,8 @@ export function LobbyView({
   onReady,
   onRounds,
   onStart,
+  onFillBots,
+  onRemoveBot,
   onAvatar,
   onLeave,
 }: LobbyViewProps) {
@@ -100,7 +106,7 @@ export function LobbyView({
   const onlineById = new Map<string, boolean>();
   state.players.forEach((player) => {
     const lastSeen = Date.parse(player.lastSeenAt);
-    const fresh = player.id === me.id || (player.isOnline && !Number.isNaN(lastSeen) && serverNow - lastSeen < ONLINE_WINDOW_MS);
+    const fresh = player.isBot || player.id === me.id || (player.isOnline && !Number.isNaN(lastSeen) && serverNow - lastSeen < ONLINE_WINDOW_MS);
     onlineById.set(player.id, fresh);
   });
 
@@ -110,7 +116,7 @@ export function LobbyView({
   const allOnline = allFilled && state.players.every((player) => onlineById.get(player.id));
   const canStart = me.isHost && allFilled && allReady && allOnline;
   const waitingNames = state.players
-    .filter((player) => !player.isReady || !onlineById.get(player.id))
+    .filter((player) => !player.isBot && (!player.isReady || !onlineById.get(player.id)))
     .map((player) => player.name);
 
   let startHint = t('lobby.allReady');
@@ -193,6 +199,16 @@ export function LobbyView({
   async function confirmLeave() {
     await onLeave();
     setLeaveOpen(false);
+  }
+
+  async function fillComputers() {
+    const ok = await onFillBots();
+    if (ok) toast(t('lobby.botsAdded'), 'success');
+  }
+
+  async function removeComputer(playerId: string) {
+    const ok = await onRemoveBot(playerId);
+    if (ok) toast(t('lobby.botRemoved'), 'info');
   }
 
   return (
@@ -293,6 +309,18 @@ export function LobbyView({
                   <span className="absolute left-2.5 top-1.5 font-hand text-xs font-semibold text-ink-faint">
                     {localizeNumber(seat, language)}
                   </span>
+                  {player.isBot && me.isHost && (
+                    <button
+                      type="button"
+                      onClick={() => void removeComputer(player.id)}
+                      disabled={busy !== null}
+                      aria-label={t('lobby.removeBot', { name: player.name })}
+                      title={t('lobby.removeBot', { name: player.name })}
+                      className="absolute right-2 top-1.5 grid h-6 w-6 place-items-center rounded-full border border-terracotta/25 bg-paper-light text-terracotta transition-colors hover:bg-terracotta hover:text-white disabled:opacity-40"
+                    >
+                      <X className="h-3.5 w-3.5" aria-hidden />
+                    </button>
+                  )}
                   {player.isHost && (
                     <span className="absolute right-2 top-1.5 text-mustard" title={t('common.host')}>
                       <Crown className="h-5 w-5 -rotate-6 drop-shadow-sm" aria-hidden />
@@ -303,7 +331,7 @@ export function LobbyView({
                     type="button"
                     disabled={!isMe}
                     onClick={openAvatar}
-                    aria-label={isMe ? t('lobby.changeAvatar') : player.name}
+                    aria-label={isMe ? t('lobby.changeAvatar') : player.isBot ? t('common.computer') : player.name}
                     title={isMe ? t('lobby.changeAvatar') : undefined}
                     className={cn(
                       'group relative grid h-16 w-16 shrink-0 place-items-center rounded-full border-2 text-3xl transition-transform',
@@ -317,6 +345,11 @@ export function LobbyView({
                     {isMe && (
                       <span className="absolute -bottom-0.5 -right-0.5 grid h-5 w-5 place-items-center rounded-full border border-ink/20 bg-paper-light text-ink-soft shadow-sm">
                         <Pencil className="h-2.5 w-2.5" aria-hidden />
+                      </span>
+                    )}
+                    {player.isBot && (
+                      <span className="absolute -bottom-0.5 -right-0.5 grid h-5 w-5 place-items-center rounded-full border border-teal/30 bg-teal text-white shadow-sm">
+                        <Bot className="h-3 w-3" aria-hidden />
                       </span>
                     )}
                   </button>
@@ -334,6 +367,12 @@ export function LobbyView({
                     {player.isHost && (
                       <span className="rounded-sm bg-mustard px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#203346]">
                         {t('common.host')}
+                      </span>
+                    )}
+                    {player.isBot && (
+                      <span className="inline-flex items-center gap-0.5 rounded-sm bg-teal/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-teal">
+                        <Bot className="h-2.5 w-2.5" aria-hidden />
+                        {t('common.computer')}
                       </span>
                     )}
                   </div>
@@ -360,6 +399,31 @@ export function LobbyView({
               );
             })}
           </div>
+
+          {me.isHost && !allFilled && (
+            <div className="mt-2.5 flex flex-col gap-2.5 rounded-xl border border-teal/25 bg-surface-teal/60 p-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-start gap-2">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-teal/10 text-teal">
+                  <Bot className="h-4 w-4" aria-hidden />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[12px] font-bold leading-snug text-ink">{t('lobby.fillComputers')}</p>
+                  <p className="text-[11px] leading-snug text-ink-soft">{t('lobby.fillComputersHint')}</p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="shrink-0"
+                loading={busy === 'fill_bots'}
+                disabled={busy !== null && busy !== 'fill_bots'}
+                onClick={() => void fillComputers()}
+                leftIcon={<Bot className="h-3.5 w-3.5" aria-hidden />}
+              >
+                {t('lobby.fillComputersButton')}
+              </Button>
+            </div>
+          )}
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ink/10 bg-paper-light px-3 py-2 text-[11px] leading-snug text-ink-soft">
             <span className="inline-flex items-center gap-1.5">

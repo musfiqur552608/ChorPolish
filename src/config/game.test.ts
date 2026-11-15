@@ -30,6 +30,10 @@ describe('game config', () => {
     for (const value of Object.values(GAME_CONFIG.phaseDurations)) {
       expect(value).toBeGreaterThan(0);
     }
+    for (const value of Object.values(GAME_CONFIG.botPacingMs)) {
+      expect(value).toBeGreaterThan(0);
+      expect(value).toBeLessThan(5_000);
+    }
     expect(GAME_CONFIG.drawSeconds).toBeGreaterThan(0);
     expect(GAME_CONFIG.graceSeconds).toBeGreaterThan(0);
     expect(GAME_CONFIG.roomCleanupSeconds).toBeGreaterThan(0);

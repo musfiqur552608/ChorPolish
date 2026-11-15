@@ -8,6 +8,7 @@ import {
   askPolice as askPoliceRequest,
   babuRise as babuRiseRequest,
   changeAvatar,
+  fillBots as fillBotsRequest,
   getRoomState,
   joinRoom,
   leaveRoom,
@@ -15,6 +16,7 @@ import {
   pickSlip,
   policeGuess,
   policeRise as policeRiseRequest,
+  removeBot as removeBotRequest,
   sendReaction,
   setReady,
   setRounds,
@@ -47,6 +49,7 @@ const PLAYER_CHANGE_KEYS = [
   'avatar',
   'seat',
   'is_host',
+  'is_bot',
   'is_ready',
   'is_online',
   'total_score',
@@ -476,6 +479,35 @@ export function useRoomSession({ code, initialName = '', initialAvatar = '' }: S
     });
   }, [roomId, runAction]);
 
+  const fillBots = useCallback(async () => {
+    if (!roomId) return false;
+    haptics.tap();
+    return runAction(
+      'fill_bots',
+      async () => {
+        await fillBotsRequest(roomId);
+        return null;
+      },
+      'join',
+    );
+  }, [roomId, runAction]);
+
+  const removeBot = useCallback(
+    async (playerId: string) => {
+      if (!roomId) return false;
+      haptics.tap();
+      return runAction(
+        'remove_bot',
+        async () => {
+          await removeBotRequest(roomId, playerId);
+          return null;
+        },
+        'flip',
+      );
+    },
+    [roomId, runAction],
+  );
+
   const pick = useCallback(
     async (slot: number) => {
       if (!roomId) return false;
@@ -631,6 +663,8 @@ export function useRoomSession({ code, initialName = '', initialAvatar = '' }: S
     toggleReady,
     updateRounds,
     start,
+    fillBots,
+    removeBot,
     pick,
     guess,
     babuRise,

@@ -42,6 +42,8 @@ export function RoomRoute() {
     toggleReady,
     updateRounds,
     start,
+    fillBots,
+    removeBot,
     updateAvatar,
   } = session;
 
@@ -221,6 +223,8 @@ export function RoomRoute() {
                 onReady={toggleReady}
                 onRounds={updateRounds}
                 onStart={start}
+                onFillBots={fillBots}
+                onRemoveBot={removeBot}
                 onAvatar={(avatar: string) => updateAvatar(avatar)}
                 onLeave={leave}
               />

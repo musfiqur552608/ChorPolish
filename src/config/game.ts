@@ -58,6 +58,19 @@ export const GAME_CONFIG = {
     POLICE_SUSPENSE: 1800,
     FINAL_REVEAL: 3800,
   },
+
+  /**
+   * Short server-driven beats for computer players. Keep these values in sync
+   * with the interval literals in migration 008_bots.sql.
+   */
+  botPacingMs: {
+    draw: 1300,
+    babuRise: 1600,
+    babuAsk: 1400,
+    policeRise: 1500,
+    policeGuess: 1700,
+    guessSuspense: 1800,
+  },
 } as const;
 
 export type GameConfig = typeof GAME_CONFIG;
