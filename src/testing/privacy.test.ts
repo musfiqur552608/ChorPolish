@@ -7,12 +7,14 @@ const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8'
 describe('scorecard privacy', () => {
   it('never passes the room code into the exported sheet', () => {
     const exportSource = read('src/features/scoresheet/ExportScoreSheet.tsx');
+    const cardSource = read('src/features/scoresheet/ScoreCard.tsx');
     const gameTableSource = read('src/features/room/GameTable.tsx');
 
-    // ScoreSheet has an optional roomCode prop, but the export path and the
-    // in-game score sheets must never supply it. (The avatar dialog may still
-    // display the code; only the `roomCode=` prop matters here.)
+    // ScoreSheet has an optional roomCode prop, but the export path, export
+    // card, and in-game score sheets must never supply it. (The avatar dialog
+    // may still display the code; only the `roomCode=` prop matters here.)
     expect(exportSource).not.toMatch(/roomCode/);
+    expect(cardSource).not.toMatch(/roomCode/);
     expect(gameTableSource).not.toMatch(/roomCode\s*=/);
   });
 

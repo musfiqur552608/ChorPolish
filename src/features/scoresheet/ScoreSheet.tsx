@@ -13,6 +13,8 @@ export interface SheetPlayer {
   avatar: string;
   isMe?: boolean;
   isHost?: boolean;
+  isBot?: boolean;
+  seat?: number;
   totalScore: number;
   babuCount: number;
 }
@@ -25,7 +27,6 @@ interface ScoreSheetProps {
   live?: boolean;
   compact?: boolean;
   className?: string;
-  captureMode?: boolean;
   roomCode?: string | null;
 }
 
@@ -49,7 +50,6 @@ export function ScoreSheet({
   live = false,
   compact = false,
   className,
-  captureMode = false,
   roomCode,
 }: ScoreSheetProps) {
   const { t, i18n } = useTranslation();
@@ -73,7 +73,7 @@ export function ScoreSheet({
     <section
       className={cn(
         'notebook relative overflow-hidden rounded-[3px] border border-ink/10 shadow-paper',
-        captureMode ? 'w-[780px]' : 'w-full',
+        'w-full',
         className,
       )}
       aria-label={t('sheet.title')}
@@ -120,12 +120,7 @@ export function ScoreSheet({
         </header>
 
         <div className="scrollbar-paper overflow-x-auto pb-1">
-          <table
-            className={cn(
-              'w-full table-fixed border-collapse',
-              captureMode ? 'min-w-[680px]' : 'min-w-[300px]',
-            )}
-          >
+          <table className={cn('w-full table-fixed border-collapse', 'min-w-[300px]')}>
             <caption className="sr-only">{t('sheet.title')} — {t('sheet.subtitle')}</caption>
             <colgroup>
               <col className="w-8 sm:w-10" />
@@ -208,11 +203,11 @@ export function ScoreSheet({
                           {cell ? (
                             <motion.span
                               key={`${roundNumber}-${player.id}-${round?.id ?? ''}`}
-                              initial={captureMode ? false : { clipPath: 'inset(0 100% 0 0)', opacity: 0.2 }}
+                              initial={{ clipPath: 'inset(0 100% 0 0)', opacity: 0.2 }}
                               animate={{ clipPath: 'inset(0 0 0 0)', opacity: 1 }}
                               transition={{
                                 duration: 0.5,
-                                delay: captureMode ? 0 : 0.18 + index * 0.12 + (roundNumber % 4) * 0.025,
+                                delay: 0.18 + index * 0.12 + (roundNumber % 4) * 0.025,
                                 ease: [0.22, 1, 0.36, 1],
                               }}
                               className="inline-flex items-baseline justify-center gap-0.5 whitespace-nowrap"

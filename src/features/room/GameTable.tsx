@@ -1020,6 +1020,8 @@ export function GameTable({ session }: GameTableProps) {
       avatar: p.avatar,
       isMe: p.id === me?.id,
       isHost: p.isHost,
+      isBot: p.isBot,
+      seat: p.seat,
       totalScore: p.totalScore,
       babuCount: p.babuCount,
     }));

@@ -44,7 +44,7 @@ src/
 │   ├── engine/          # Pure game engine (154/154 Vitest tests pass)
 │   ├── lobby/           # Lobby UI (LobbyView, RoomRoute, RoomPreviewView)
 │   ├── room/            # Game table (GameTable), session hook (useRoomSession)
-│   ├── scoresheet/      # ScoreSheet component
+│   ├── scoresheet/      # In-room notebook, share card, PNG/PDF export
 │   └── shell/           # NotFoundPage
 ├── i18n/                # Bengali (default) + English locale files
 ├── lib/                 # Utilities: sound, haptics, cn, errors, time, etc.
@@ -169,7 +169,9 @@ VITE_SUPABASE_ANON_KEY=sb_publishable_YOUR_KEY
 - `src/features/engine/engine.ts` — Pure game engine (no React/Supabase dependency)
 - `src/config/game.ts` — Central config: points, timers, avatars, phase durations
 - `src/i18n/locales/bn.ts` — Bengali (default) + English
-- `src/features/scoresheet/ScoreSheet.tsx` — Handwritten score sheet (live, compact, captureMode, PNG/PDF export)
+- `src/features/scoresheet/ScoreSheet.tsx` — Handwritten in-room notebook (live, compact, private own-slip reveal)
+- `src/features/scoresheet/ScoreCard.tsx` — Designed 1080×1620 share card and 1240×1754 A4 PDF page
+- `src/features/scoresheet/ExportScoreSheet.tsx` — Scaled previews, PNG/PDF capture, and Web Share
 
 ### Pause/Reconnect Mechanics
 - Player goes offline after 40s of no activity (`isOnline: false`, `disconnectedAt` set)
@@ -207,8 +209,8 @@ VITE_SUPABASE_ANON_KEY=sb_publishable_YOUR_KEY
 - Sound/haptics for all actions
 - Reduced motion support
 - Accessible How to Play modal and focus-trapped dialogs
-- ScoreSheet (live, compact, captureMode) with private own-slip reveal
-- PNG/PDF scorecard export + Web Share API (room code excluded)
+- ScoreSheet (live, compact) with private own-slip reveal
+- Premium midnight-and-gold scorecard: 1080×1620 share image, full-bleed A4 PDF, scaled format previews, and Web Share API (room code excluded)
 - 154/154 automated tests (unit, static migration/security invariants)
 - 7 SQL migrations (001 → 002 → 004 → 005 → 006 → 007 → 008)
 - Guaranteed end-of-room data deletion (cleanup_at + cron fallbacks + FK cascades)
