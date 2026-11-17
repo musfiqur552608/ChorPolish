@@ -22,6 +22,7 @@ const CLEANUP = '20261024000500_scheduled_cleanup.sql';
 const END = '20261024000600_end_of_room_cleanup.sql';
 const LEAVE = '20261024000700_leave_ends_match.sql';
 const BOTS = '20261024000800_bots.sql';
+const ADMIN = '20261117000900_admin_analytics.sql';
 
 describe('migration set', () => {
   it('ships every required migration in order and no unsafe 003 draft', () => {
@@ -29,7 +30,7 @@ describe('migration set', () => {
       .filter((file) => file.endsWith('.sql'))
       .sort();
 
-    for (const file of [INIT, RPCS, MANUAL, CLEANUP, END, LEAVE, BOTS]) {
+    for (const file of [INIT, RPCS, MANUAL, CLEANUP, END, LEAVE, BOTS, ADMIN]) {
       expect(files).toContain(file);
     }
     expect(files.indexOf(INIT)).toBeLessThan(files.indexOf(RPCS));
@@ -38,6 +39,7 @@ describe('migration set', () => {
     expect(files.indexOf(CLEANUP)).toBeLessThan(files.indexOf(END));
     expect(files.indexOf(END)).toBeLessThan(files.indexOf(LEAVE));
     expect(files.indexOf(LEAVE)).toBeLessThan(files.indexOf(BOTS));
+    expect(files.indexOf(BOTS)).toBeLessThan(files.indexOf(ADMIN));
     expect(existsSync(resolve(MIGRATIONS_DIR, '20261023000300_cleanup_migration.sql'))).toBe(false);
   });
 });
@@ -300,5 +302,164 @@ describe('computer players (008)', () => {
       /grant execute on function public\.create_practice_room\(text, text, integer, uuid\) to authenticated;/i,
     );
     expect(botsCode).not.toMatch(/grant execute on function public\.build_room_state/i);
+  });
+});
+
+describe('admin + analytics (009)', () => {
+  const admin = read(ADMIN);
+  const code = withoutComments(admin);
+
+  it('keeps the admin allowlist SQL-only and protects every admin RPC', () => {
+    expect(code).toMatch(/create table if not exists public\.admin_users/);
+    expect(code).toContain('references auth.users (id) on delete cascade');
+    expect(code).toContain('alter table public.admin_users enable row level security;');
+    expect(code).toContain('revoke all on table public.admin_users from anon, authenticated;');
+    expect(code).toContain('perform public.assert_admin();');
+    expect(code).toContain("raise exception using message = 'UNAUTHENTICATED';");
+    expect(code).toContain("raise exception using message = 'NOT_ADMIN';");
+    expect(code).toContain('from public.admin_users where user_id = v_user');
+
+    expect(code).toContain(
+      'revoke all on function public.grant_admin(text, text) from public, anon, authenticated;',
+    );
+    expect(code).toContain(
+      'revoke all on function public.revoke_admin(text) from public, anon, authenticated;',
+    );
+    expect(code).not.toMatch(/grant execute on function public\.grant_admin/i);
+    expect(code).not.toMatch(/grant execute on function public\.revoke_admin/i);
+  });
+
+  it('exposes admin reads only to authenticated callers with server-side checks', () => {
+    for (const signature of [
+      'public.admin_session()',
+      'public.admin_get_overview(text)',
+      'public.admin_list_notices()',
+      'public.admin_toggle_notice(uuid, boolean)',
+      'public.admin_delete_notice(uuid)',
+      'public.admin_get_seo()',
+    ]) {
+      expect(code).toContain(`grant execute on function ${signature} to authenticated;`);
+      expect(code).toContain(`revoke all on function ${signature} from public, anon;`);
+    }
+
+    expect(code).toMatch(
+      /grant execute on function public\.admin_save_notice\([\s\S]*?\) to authenticated;/,
+    );
+    expect(code).toMatch(
+      /grant execute on function public\.admin_save_seo\([\s\S]*?\) to authenticated;/,
+    );
+    expect(code).not.toMatch(/grant execute on function public\.assert_admin/i);
+    expect(code).not.toMatch(/grant execute on function public\.admin_period_stats/i);
+    expect(code).not.toMatch(/grant execute on function public\.admin_pct_change/i);
+  });
+
+  it('keeps analytics pseudonymous and unreadable by clients', () => {
+    const usersTable = code.slice(
+      code.indexOf('create table if not exists public.analytics_users'),
+      code.indexOf('create table if not exists public.analytics_visits'),
+    );
+    const visitsTable = code.slice(
+      code.indexOf('create table if not exists public.analytics_visits'),
+      code.indexOf('create table if not exists public.analytics_matches'),
+    );
+    const matchesTable = code.slice(
+      code.indexOf('create table if not exists public.analytics_matches'),
+      code.indexOf('create table if not exists public.analytics_player_sessions'),
+    );
+    const sessionsTable = code.slice(
+      code.indexOf('create table if not exists public.analytics_player_sessions'),
+      code.indexOf('alter table public.analytics_users'),
+    );
+
+    for (const table of [usersTable, visitsTable, matchesTable, sessionsTable]) {
+      expect(table).not.toMatch(/\b(display_name|player_name|room_code)\b/i);
+    }
+    expect(usersTable).not.toMatch(/\b(name|code)\b/i);
+    expect(matchesTable).not.toMatch(/\b(name|code)\b/i);
+    expect(sessionsTable).not.toMatch(/\b(name|code)\b/i);
+
+    for (const table of [
+      'analytics_users',
+      'analytics_visits',
+      'analytics_matches',
+      'analytics_player_sessions',
+    ]) {
+      expect(code).toContain(`alter table public.${table} enable row level security;`);
+      expect(code).toContain(`revoke all on table public.${table} from anon, authenticated;`);
+    }
+  });
+
+  it('records visits, matches and player-hours from triggers', () => {
+    expect(code).toContain('after insert on public.players');
+    expect(code).toContain('after update of status, started_at on public.rooms');
+    expect(code).toContain('after update of status, finished_at on public.rooms');
+    expect(code).toContain('before delete on public.rooms');
+    expect(code).toContain('perform public.analytics_close_match(');
+    expect(code).toMatch(/if new\.is_bot or new\.user_id is null then\s+return new;/);
+    expect((code.match(/insert into public\.analytics_matches/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    expect((code.match(/insert into public\.analytics_player_sessions/g) ?? []).length).toBeGreaterThanOrEqual(
+      3,
+    );
+    expect(code).toMatch(/on conflict \(room_id\) do update/);
+    expect(code).toMatch(/on conflict \(room_id, user_id\) do nothing/);
+  });
+
+  it('backfills surviving rooms without storing names or room codes', () => {
+    expect(code).toMatch(
+      /insert into public\.analytics_users \([\s\S]*?select[\s\S]*?p\.user_id,[\s\S]*?from public\.players p/,
+    );
+    expect(code).toMatch(
+      /insert into public\.analytics_visits \([\s\S]*?select p\.user_id, p\.room_id, p\.joined_at/,
+    );
+    expect(code).toMatch(
+      /insert into public\.analytics_matches \([\s\S]*?select[\s\S]*?r\.id,[\s\S]*?from public\.rooms r/,
+    );
+    expect(code).not.toMatch(/insert into public\.analytics_[a-z_]+[\s\S]*?\b(room_code|player_name|display_name)\b/i);
+  });
+
+  it('publishes only live notices and SEO through one public RPC', () => {
+    const publicRpc = code.slice(
+      code.indexOf('create or replace function public.get_public_site_config()'),
+      code.indexOf('create or replace function public.admin_period_stats'),
+    );
+
+    expect(publicRpc).toContain("'notice'");
+    expect(publicRpc).toContain("'seo'");
+    expect(publicRpc).toContain('where n.is_active');
+    expect(publicRpc).toContain('n.starts_at <= now()');
+    expect(publicRpc).toContain('(n.ends_at is null or n.ends_at > now())');
+    expect(publicRpc).toContain('order by n.created_at desc');
+    expect(publicRpc).toContain('limit 1');
+    expect(publicRpc).not.toContain('admin_users');
+    expect(publicRpc).not.toContain('created_by');
+    expect(publicRpc).not.toContain('updated_by');
+
+    expect(code).toContain('revoke all on function public.get_public_site_config() from public;');
+    expect(code).toContain(
+      'grant execute on function public.get_public_site_config() to anon, authenticated;',
+    );
+  });
+
+  it('validates and mirrors notices before writing them', () => {
+    expect(code).toContain("raise exception using message = 'INVALID_NOTICE';");
+    expect(code).toContain("v_title_en := coalesce(nullif(v_title_en, ''), v_title_bn);");
+    expect(code).toContain("v_title_bn := coalesce(nullif(v_title_bn, ''), v_title_en);");
+    expect(code).toContain("v_body_en := coalesce(nullif(v_body_en, ''), v_body_bn);");
+    expect(code).toContain("v_body_bn := coalesce(nullif(v_body_bn, ''), v_body_en);");
+    expect(code).toContain('if v_ends_at is not null and v_ends_at <= v_starts_at then');
+    expect(code).toContain("if v_tone not in ('info', 'success', 'warning') then");
+    expect(code).toContain("raise exception using message = 'NOTICE_NOT_FOUND';");
+    expect(code).toContain('order by n.is_active desc, n.created_at desc');
+  });
+
+  it('validates SEO and stores a singleton settings row', () => {
+    expect(code).toContain("raise exception using message = 'INVALID_SEO';");
+    expect(code).toContain("if v_twitter <> '' and v_twitter !~ '^[A-Za-z0-9_]{1,30}$' then");
+    expect(code).toContain("if v_canonical <> '' and v_canonical !~* '^https?://[^[:space:]]+$' then");
+    expect(code).toContain("if v_og_image <> '' and v_og_image !~* '^https?://[^[:space:]]+$' then");
+    expect(code).toContain('insert into public.site_settings (');
+    expect(code).toContain('on conflict (id) do update');
+    expect(code).toContain('return public.admin_get_seo();');
+    expect(code).toContain('where s.id = 1');
   });
 });

@@ -568,6 +568,103 @@ p {
     min-height: 100svh;
     min-height: 100dvh;
   }
+
+  /* ── Admin control room ─────────────────────────────────────────────── */
+  .admin-shell {
+    background-image:
+      radial-gradient(ellipse 60% 42% at 12% -8%, rgba(223, 169, 63, 0.18), transparent 70%),
+      radial-gradient(ellipse 50% 36% at 92% 12%, rgba(51, 121, 111, 0.14), transparent 72%);
+    background-attachment: fixed;
+  }
+
+  .dark .admin-shell {
+    background-image:
+      radial-gradient(ellipse 60% 42% at 12% -8%, rgba(246, 203, 95, 0.12), transparent 70%),
+      radial-gradient(ellipse 50% 36% at 92% 12%, rgba(110, 192, 180, 0.1), transparent 72%);
+  }
+
+  .admin-aurora {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 34% 28% at 18% 24%, rgba(223, 169, 63, 0.24), transparent 72%),
+      radial-gradient(ellipse 30% 32% at 82% 18%, rgba(51, 121, 111, 0.2), transparent 72%),
+      radial-gradient(ellipse 38% 26% at 56% 88%, rgba(184, 75, 61, 0.12), transparent 72%);
+    filter: blur(8px);
+  }
+
+  .dark .admin-aurora {
+    background:
+      radial-gradient(ellipse 34% 28% at 18% 24%, rgba(246, 203, 95, 0.16), transparent 72%),
+      radial-gradient(ellipse 30% 32% at 82% 18%, rgba(110, 192, 180, 0.14), transparent 72%),
+      radial-gradient(ellipse 38% 26% at 56% 88%, rgba(240, 140, 110, 0.1), transparent 72%);
+  }
+
+  .admin-grid {
+    background-image:
+      linear-gradient(to right, rgba(32, 51, 70, 0.055) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(32, 51, 70, 0.055) 1px, transparent 1px);
+    background-size: 34px 34px;
+    mask-image: radial-gradient(ellipse 70% 62% at 50% 38%, black, transparent 78%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 62% at 50% 38%, black, transparent 78%);
+  }
+
+  .dark .admin-grid {
+    background-image:
+      linear-gradient(to right, rgba(238, 244, 248, 0.06) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(238, 244, 248, 0.06) 1px, transparent 1px);
+  }
+
+  .admin-sidebar-glow {
+    position: absolute;
+    inset: -20% -55% auto auto;
+    width: 280px;
+    height: 280px;
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgba(240, 195, 90, 0.18), transparent 68%);
+    filter: blur(18px);
+    pointer-events: none;
+  }
+
+  .admin-live-card {
+    background:
+      radial-gradient(ellipse 55% 70% at 8% 12%, rgba(51, 121, 111, 0.3), transparent 70%),
+      radial-gradient(ellipse 45% 55% at 92% 8%, rgba(240, 195, 90, 0.16), transparent 72%),
+      linear-gradient(145deg, #162838 0%, #101b26 58%, #0d1720 100%);
+  }
+
+  .admin-live-orb {
+    position: absolute;
+    border-radius: 9999px;
+    pointer-events: none;
+    filter: blur(28px);
+  }
+
+  .admin-live-orb-one {
+    right: -12%;
+    top: -38%;
+    width: 260px;
+    height: 260px;
+    background: radial-gradient(circle, rgba(240, 195, 90, 0.22), transparent 68%);
+  }
+
+  .admin-live-orb-two {
+    bottom: -55%;
+    left: 18%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(51, 121, 111, 0.26), transparent 68%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .admin-live-card,
+    .admin-shell,
+    .admin-aurora {
+      background-attachment: scroll;
+    }
+  }
 }
 
 @keyframes ink-write {

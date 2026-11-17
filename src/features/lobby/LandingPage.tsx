@@ -24,6 +24,7 @@ import { CircleScribble, LoopyArrow, MagnifierDoodle, Sparkle, TinyStarCrown } f
 import { RoleSlip } from '@/components/roles/RoleSlip';
 import { ScoreSheet } from '@/features/scoresheet/ScoreSheet';
 import { mockHistory, mockPlayers } from '@/features/scoresheet/mockData';
+import { SiteNoticeBanner } from '@/features/site/SiteNoticeBanner';
 import { GAME_CONFIG } from '@/config/game';
 import { useToastStore } from '@/hooks/useToastStore';
 import { cn } from '@/lib/cn';
@@ -205,6 +206,8 @@ export function LandingPage() {
           <PreferenceButtons />
         </div>
       </header>
+
+      <SiteNoticeBanner />
 
       <main className="relative z-10">
         <section className="relative mx-auto grid max-w-6xl gap-12 px-5 pb-16 pt-8 sm:px-7 sm:pt-12 lg:grid-cols-[1.05fr_.95fr] lg:gap-10 lg:pb-24 lg:pt-10">
