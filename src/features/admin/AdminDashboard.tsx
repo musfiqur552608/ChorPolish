@@ -55,10 +55,10 @@ function NavButton({
         'group flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[13px] font-bold transition-all',
         active
           ? 'bg-[#f0c35a] text-[#101b26] shadow-[0_6px_18px_-8px_rgba(240,195,90,0.7)]'
-          : 'text-paper/60 hover:bg-white/[0.06] hover:text-paper',
+          : 'text-ink/60 hover:bg-ink/[0.06] hover:text-ink',
       )}
     >
-      <Icon className={cn('h-4 w-4 shrink-0', active ? 'text-[#101b26]' : 'text-paper/45 group-hover:text-paper/80')} aria-hidden />
+      <Icon className={cn('h-4 w-4 shrink-0', active ? 'text-[#101b26]' : 'text-ink/45 group-hover:text-ink/80')} aria-hidden />
       {label}
     </button>
   );
@@ -133,7 +133,7 @@ export function AdminDashboard({
   return (
     <div className="admin-shell min-h-screen bg-paper text-ink">
       <div className="lg:grid lg:min-h-screen lg:grid-cols-[252px_minmax(0,1fr)]">
-        <aside className="relative hidden overflow-hidden bg-[#101b26] text-paper-light lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:p-4">
+        <aside className="relative hidden overflow-hidden bg-[#101b26] text-ink lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:p-4">
           <div className="admin-sidebar-glow" aria-hidden />
           <div className="relative">
             <Logo inverted />
@@ -162,9 +162,9 @@ export function AdminDashboard({
                   {t('admin.shell.live')}
                 </span>
               </div>
-              <p className="mt-2 text-[11px] leading-relaxed text-paper/50">{t('admin.shell.autoRefresh')}</p>
+              <p className="mt-2 text-[11px] leading-relaxed text-ink/50">{t('admin.shell.autoRefresh')}</p>
               {lastUpdated && (
-                <p className="mt-1.5 text-[10px] font-semibold text-paper/35">
+                <p className="mt-1.5 text-[10px] font-semibold text-ink/40">
                   {t('admin.shell.updated', {
                     time: formatDateTime(lastUpdated.toISOString(), i18n.language, timezone),
                   })}
@@ -178,14 +178,14 @@ export function AdminDashboard({
                   {session.displayName.slice(0, 1).toUpperCase()}
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-[12px] font-bold text-paper">{session.displayName}</p>
-                  <p className="truncate text-[10px] text-paper/40">{session.email ?? t('admin.shell.admin')}</p>
+                  <p className="truncate text-[12px] font-bold text-ink">{session.displayName}</p>
+                  <p className="truncate text-[10px] text-ink/60">{session.email ?? t('admin.shell.admin')}</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={onSignOut}
-                className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-2 text-[11px] font-bold text-paper/60 transition-colors hover:bg-white/[0.06] hover:text-paper"
+                className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-2 text-[11px] font-bold text-ink/60 transition-colors hover:bg-ink/[0.06] hover:text-ink"
               >
                 <LogOut className="h-3.5 w-3.5" aria-hidden />
                 {t('admin.shell.signOut')}
@@ -194,7 +194,7 @@ export function AdminDashboard({
 
             <Link
               to="/"
-              className="inline-flex h-9 w-full items-center justify-center gap-1 rounded-full border border-white/10 px-2.5 text-[10px] font-bold text-paper/60 transition-colors hover:bg-white/[0.06] hover:text-paper"
+              className="inline-flex h-9 w-full items-center justify-center gap-1 rounded-full border border-white/10 px-2.5 text-[10px] font-bold text-ink/60 transition-colors hover:bg-ink/[0.06] hover:text-ink"
             >
               <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
               {t('admin.shell.backToGame')}

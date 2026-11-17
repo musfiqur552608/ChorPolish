@@ -281,10 +281,10 @@ function SeoPreview({
               <div className="absolute inset-0 opacity-20">
                 <div className="admin-grid h-full w-full" />
               </div>
-              <div className="relative text-center text-paper-light">
+              <div className="relative text-center text-ink">
                 <Sparkles className="mx-auto h-6 w-6 text-[#f0c35a]" aria-hidden />
                 <p className="mt-2 font-display text-lg font-bold">চোর পুলিশ</p>
-                <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-paper/45">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-ink/45">
                   Chor Police
                 </p>
               </div>

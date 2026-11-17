@@ -104,7 +104,7 @@ function LiveMetric({
         {icon}
         <span>{label}</span>
       </div>
-      <p className="mt-2 font-display text-3xl font-bold leading-none text-paper-light">
+      <p className="mt-2 font-display text-3xl font-bold leading-none text-ink">
         <AnimatedNumber value={value} format={(next) => formatCount(next, i18n.language)} />
       </p>
     </motion.div>
@@ -116,7 +116,7 @@ function LivePulse({ overview }: { overview: AdminOverview }) {
   const reduce = useReducedMotion();
 
   return (
-    <section className="admin-live-card relative overflow-hidden rounded-[22px] border border-white/10 p-4 text-paper-light shadow-[0_24px_60px_-28px_rgba(9,19,29,0.85)] sm:p-6">
+    <section className="admin-live-card relative overflow-hidden rounded-[22px] border border-white/10 p-4 text-ink shadow-[0_24px_60px_-28px_rgba(9,19,29,0.85)] sm:p-6">
       <div className="admin-live-orb admin-live-orb-one" aria-hidden />
       <div className="admin-live-orb admin-live-orb-two" aria-hidden />
       <div className="pointer-events-none absolute inset-0 opacity-[0.08]" aria-hidden>
@@ -130,7 +130,7 @@ function LivePulse({ overview }: { overview: AdminOverview }) {
               <LiveDot />
               {t('admin.pulse.liveNow')}
             </span>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-paper/40">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink/40">
               {t('admin.shell.autoRefresh')}
             </span>
           </div>
@@ -141,11 +141,11 @@ function LivePulse({ overview }: { overview: AdminOverview }) {
           <h1 className="mt-1.5 max-w-xl font-display text-[34px] font-bold leading-[1.02] tracking-tight sm:text-[48px]">
             {t('admin.pulse.title')}
           </h1>
-          <p className="mt-3 max-w-lg text-[13px] leading-relaxed text-paper/60 sm:text-sm">
+          <p className="mt-3 max-w-lg text-[13px] leading-relaxed text-ink/60 sm:text-sm">
             {t('admin.pulse.subtitle')}
           </p>
 
-          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] font-semibold text-paper/55">
+          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] font-semibold text-ink/55">
             <span className="inline-flex items-center gap-1.5">
               <Radio className="h-3.5 w-3.5 text-[#9fe3d8]" aria-hidden />
               {t('admin.pulse.liveRooms')}
@@ -187,7 +187,7 @@ function LivePulse({ overview }: { overview: AdminOverview }) {
             icon={<Bot className="h-3.5 w-3.5" aria-hidden />}
             label={t('admin.pulse.bots')}
             value={overview.live.bots}
-            tone="text-paper/65"
+            tone="text-ink/65"
             delay={0.16}
           />
         </div>
@@ -204,7 +204,7 @@ function LivePulse({ overview }: { overview: AdminOverview }) {
         </motion.div>
       )}
 
-      <div className="relative mt-5 flex flex-wrap items-center gap-2 border-t border-white/10 pt-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-paper/40">
+      <div className="relative mt-5 flex flex-wrap items-center gap-2 border-t border-white/10 pt-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink/40">
         <span>{t('admin.shell.timezone', { zone: overview.timezone })}</span>
         <span className="h-1 w-1 rounded-full bg-paper/25" aria-hidden />
         <span>
